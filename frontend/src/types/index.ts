@@ -180,3 +180,62 @@ export interface HealthResponse {
   vision_provider: string;
   llm_provider: string;
 }
+
+// ---- Frontend UI & Navigation Types ----------------------------
+
+export type NavigationTab = 'workspace' | 'history' | 'reports' | 'evaluation' | 'about';
+
+export type ViewMode = 'single' | 'side-by-side' | 'before-after' | 'difference';
+
+export interface OverlayOptions {
+  evidence: boolean;
+  boundingBoxes: boolean;
+  changeHeatmap: boolean;
+  segmentation: boolean;
+}
+
+export interface ValidationItem {
+  label: string;
+  status: 'valid' | 'warning' | 'error' | 'pending';
+  detail?: string;
+}
+
+export interface HistoryItem {
+  id: string;
+  requestId: string;
+  query: string;
+  task: string;
+  configuration: InputConfiguration;
+  confidenceScore: number;
+  confidenceLabel: ConfidenceLabel;
+  timestamp: string;
+  fileCount: number;
+  files: string[];
+  answerSummary: string;
+  result: AnalysisResponse;
+}
+
+export interface ReportItem {
+  id: string;
+  title: string;
+  requestId: string;
+  task: string;
+  date: string;
+  imageCount: number;
+  confidenceScore: number;
+  confidenceLabel: ConfidenceLabel;
+  specialistUsed: string;
+  summary: string;
+  evidenceCount: number;
+  result: AnalysisResponse;
+}
+
+export interface EvaluationMetricCard {
+  task: string;
+  metricName: string;
+  metricValue: string | null;
+  benchmarkTarget: string;
+  status: 'active' | 'pending' | 'baseline';
+  description: string;
+}
+

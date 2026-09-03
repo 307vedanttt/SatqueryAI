@@ -75,7 +75,6 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
       {files.length > 0 && (
         <div className="upload-previews mt-2">
           {files.map((file, idx) => {
-            const info = uploadedInfos[idx];
             const isGeoTIFF = file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff');
             const previewUrl = isGeoTIFF ? null : URL.createObjectURL(file);
 
