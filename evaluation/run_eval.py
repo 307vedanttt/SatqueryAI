@@ -1,92 +1,130 @@
-"""
-SatQuery AI — Automated Evaluation Harness (Person E - Priority 3)
+"""Evaluation runner for SatQuery AI."""
 
-Runs evaluation test set through agent executor and computes summary metrics:
-  - Total test cases
-  - Success rate
-  - Average latency
-  - Keyword match rate
-"""
-
-import sys
+import os
 import time
-from pathlib import Path
-from PIL import Image
+import logging
+from collections import defaultdict
+from typing import Dict, Any, List
 
-root_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(root_dir.resolve()))
-
+from evaluation.test_set import get_test_cases
 from schemas.contracts import ImageMetadata, SpecialistRequest
 from agent.executor import Executor
-from evaluation.test_set import TEST_SET
 
+# Set up logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
-def run_evaluation():
+def run_evaluation(verbose: bool = True) -> None:
+    """Run the evaluation suite over curated test cases."""
+    test_cases = get_test_cases()
+    
+    total_cases = len(test_cases)
+    cases_run = 0
+    cases_skipped = 0
+    success_count = 0
+    keyword_match_count = 0
+    total_latency = 0.0
+    
+    # Metrics by task type
+    task_metrics: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+        'run': 0, 'success': 0, 'keyword_match': 0, 'latency': 0.0
+    })
+    
     executor = Executor()
-    temp_dir = Path("./data/uploads")
-    temp_dir.mkdir(parents=True, exist_ok=True)
+    
+    for i, tc in enumerate(test_cases, 1):
+        image_paths = tc.get("image_paths", [])
+        
+        # Check if all images exist
+        missing_images = [p for p in image_paths if not os.path.exists(p)]
+        if missing_images:
+            logger.warning(f"Skipping test case {i} due to missing images: {missing_images}")
+            cases_skipped += 1
+            continue
+            
+        cases_run += 1
+        task_type = tc["task_type"]
+        task_metrics[task_type]['run'] += 1
+        
+        # Construct ImageMetadata
+        images = []
+        for path, sensor in zip(image_paths, tc.get("sensors", ["optical"] * len(image_paths))):
+            images.append(
+                ImageMetadata(
+                    sensor=sensor,
+                    file_path=path,
+                    crs="EPSG:4326",  # placeholder
+                    width=1024,      # placeholder
+                    height=1024,     # placeholder
+                    bands=3,         # placeholder
+                    resolution_m=1.0 # placeholder
+                )
+            )
+            
+        request = SpecialistRequest(
+            query=tc["query"],
+            images=images,
+            task_hint=task_type
+        )
+        
+        start_time = time.time()
+        try:
+            response = executor.run(request)
+            latency = time.time() - start_time
+            
+            is_success = (response.status == "success")
+            
+            answer_lower = response.answer.lower() if response.answer else ""
+            has_keyword = any(kw.lower() in answer_lower for kw in tc.get("expected_keywords", []))
+            
+            if is_success:
+                success_count += 1
+                task_metrics[task_type]['success'] += 1
+                
+            if has_keyword:
+                keyword_match_count += 1
+                task_metrics[task_type]['keyword_match'] += 1
+                
+            total_latency += latency
+            task_metrics[task_type]['latency'] += latency
+            
+            if verbose:
+                logger.info(f"Test case {i} ({task_type}) - Success: {is_success}, Latency: {latency:.2f}s")
+                
+        except Exception as e:
+            latency = time.time() - start_time
+            total_latency += latency
+            task_metrics[task_type]['latency'] += latency
+            logger.error(f"Test case {i} failed with exception: {e}")
 
-    img_opt_path = str(temp_dir / "eval_opt.png")
-    img_sar_path = str(temp_dir / "eval_sar.png")
+    # Generate summary table
+    print("\n============================================================")
+    print("SatQuery AI Evaluation Summary")
+    print("============================================================")
+    print(f"Total cases:        {total_cases}")
+    print(f"Cases run:          {cases_run}  ({cases_skipped} skipped — missing image files)")
+    
+    if cases_run > 0:
+        success_rate = (success_count / cases_run) * 100
+        keyword_match_rate = (keyword_match_count / cases_run) * 100
+        avg_latency = total_latency / cases_run
+        
+        print(f"Success rate:       {success_rate:.1f}% ({success_count}/{cases_run})")
+        print(f"Keyword match rate: {keyword_match_rate:.1f}% ({keyword_match_count}/{cases_run})")
+        print(f"Avg latency:        {avg_latency:.2f}s")
+        
+        print("\nBy task type:")
+        for t_type, metrics in task_metrics.items():
+            t_run = metrics['run']
+            if t_run > 0:
+                t_success = metrics['success']
+                t_keyword = metrics['keyword_match']
+                t_latency = metrics['latency'] / t_run
+                print(f"  {t_type:<18}: {t_success}/{t_run} success, {t_keyword}/{t_run} keyword match, {t_latency:.2f}s")
+    else:
+        print("\nNo cases were run. Ensure test images exist in the data/ directory.")
+        
+    print("============================================================\n")
 
-    Image.new("RGB", (100, 100), color="green").save(img_opt_path)
-    Image.new("RGB", (100, 100), color="gray").save(img_sar_path)
-
-    opt_meta = ImageMetadata(sensor="optical", crs="EPSG:4326", width=100, height=100, resolution_m=10.0, file_path=img_opt_path)
-    sar_meta = ImageMetadata(sensor="sar", crs="EPSG:4326", width=100, height=100, resolution_m=10.0, file_path=img_sar_path)
-
-    total = len(TEST_SET)
-    successes = 0
-    keyword_matches = 0
-    latencies = []
-
-    print("==================================================")
-    print("SatQuery AI -- Automated Evaluation Runner")
-    print("==================================================")
-
-    for item in TEST_SET:
-        task_type = item["task_type"]
-        query = item["query"]
-
-        if task_type in ("change_detection", "change_vqa"):
-            imgs = [opt_meta, opt_meta]
-        elif task_type == "optical_sar_fusion":
-            imgs = [opt_meta, sar_meta]
-        else:
-            imgs = [opt_meta]
-
-        req = SpecialistRequest(query=query, images=imgs)
-
-        start = time.monotonic()
-        resp, trace = executor.run(req)
-        elapsed = time.monotonic() - start
-        latencies.append(elapsed)
-
-        is_success = resp.status == "success"
-        if is_success:
-            successes += 1
-
-        ans_lower = resp.answer.lower()
-        match = any(kw.lower() in ans_lower for kw in item["expected_keywords"])
-        if match:
-            keyword_matches += 1
-
-        status_str = "[PASS]" if is_success else "[FAIL]"
-        print(f"{status_str} Test #{item['id']} ({task_type}) - Latency: {elapsed*1000:.1f}ms - Conf: {resp.confidence_tier}")
-
-    avg_lat = (sum(latencies) / total) * 1000 if total > 0 else 0.0
-    succ_rate = (successes / total) * 100 if total > 0 else 0.0
-    kw_rate = (keyword_matches / total) * 100 if total > 0 else 0.0
-
-    print("==================================================")
-    print("EVALUATION SUMMARY")
-    print("==================================================")
-    print(f"Total Test Cases   : {total}")
-    print(f"Success Rate       : {succ_rate:.1f}% ({successes}/{total})")
-    print(f"Keyword Match Rate : {kw_rate:.1f}% ({keyword_matches}/{total})")
-    print(f"Average Latency    : {avg_lat:.1f} ms")
-    print("==================================================")
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     run_evaluation()

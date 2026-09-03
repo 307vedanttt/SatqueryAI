@@ -1,139 +1,120 @@
 """
-SatQuery AI — Grounding Specialist (Person B)
-
-Executes text-guided region grounding using Qwen2.5-VL bounding box outputs.
-
-IMPORTANT LIMITATION NOTE:
-  This module produces visual localization (bounding boxes within normalized/pixel image coordinates).
-  It does NOT output real-world geographic coordinates (latitude/longitude).
+Grounding operations using Qwen2.5-VL-3B-Instruct.
 """
-
-import logging
 import re
+import logging
 from typing import Optional
 from PIL import Image
-from schemas.contracts import BoundingBox, SpecialistRequest, SpecialistResponse
+from schemas.contracts import SpecialistRequest, SpecialistResponse, BoundingBox
 from models.vqa.model_loader import get_model_and_processor
 
-logger = logging.getLogger("satquery.models.vqa.grounding")
+logger = logging.getLogger(__name__)
 
 
-def parse_bbox_from_text(text: str, label: str = "target object") -> Optional[BoundingBox]:
+def parse_bbox_from_text(text: str) -> Optional[BoundingBox]:
     """
-    Extract bounding box coordinates from text output.
-    Looks for pattern like [ymin, xmin, ymax, xmax] or [xmin, ymin, xmax, ymax] (4 numbers).
+    Parses exactly 4 coordinate numbers from a string to form a BoundingBox.
+    Handles formats like [123, 456, 789, 012] or <box>x1,y1,x2,y2</box>.
     """
-    # Matches [123, 456, 789, 900] or (123, 456, 789, 900)
-    match = re.search(r"[\[\(]\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*[\]\)]", text)
-    if not match:
-        # Fallback: find any sequence of 4 numbers
-        nums = re.findall(r"\b\d+\b", text)
-        if len(nums) >= 4:
-            val1, val2, val3, val4 = map(float, nums[:4])
-            return BoundingBox(
-                label=label,
-                xmin=min(val1, val3),
-                ymin=min(val2, val4),
-                xmax=max(val1, val3),
-                ymax=max(val2, val4),
-            )
-        return None
-
-    val1, val2, val3, val4 = map(float, match.groups())
-    return BoundingBox(
-        label=label,
-        xmin=min(val1, val3),
-        ymin=min(val2, val4),
-        xmax=max(val1, val3),
-        ymax=max(val2, val4),
-    )
+    nums = re.findall(r'[-+]?\d*\.\d+|\d+', text)
+    if len(nums) == 4:
+        return BoundingBox(
+            x1=float(nums[0]),
+            y1=float(nums[1]),
+            x2=float(nums[2]),
+            y2=float(nums[3]),
+            label="detected region",
+            confidence=1.0
+        )
+    return None
 
 
 def run_grounding(request: SpecialistRequest) -> SpecialistResponse:
-    """Run region grounding and bounding box localization."""
-    if len(request.images) != 1:
+    """
+    Runs visual grounding on exactly one image.
+    This produces visual localization within the image (pixel coordinates), NOT geographic coordinates (lat/lon). 
+    Do not conflate image-space bounding boxes with real-world geographic extents.
+    """
+    if not request.images or len(request.images) != 1:
         return SpecialistResponse(
             task="grounding",
-            answer="Error: Grounding requires exactly 1 image.",
+            answer="",
             confidence=0.0,
             confidence_tier="insufficient",
             status="error",
-            error_message=f"Grounding requires exactly 1 image, got {len(request.images)}",
+            error_message="run_grounding requires exactly 1 image in the request."
         )
-
-    file_path = request.images[0].file_path
-
-    try:
-        image = Image.open(file_path).convert("RGB")
-    except Exception as e:
-        return SpecialistResponse(
-            task="grounding",
-            answer=f"Error loading image: {e}",
-            confidence=0.0,
-            confidence_tier="insufficient",
-            status="error",
-            error_message=str(e),
-        )
-
+        
     try:
         model, processor = get_model_and_processor()
-
-        ground_prompt = (
-            f"Identify and locate '{request.query}' in the image. "
-            "Return the bounding box coordinates in format [ymin, xmin, ymax, xmax] normalized 0-1000."
-        )
-
+        from qwen_vl_utils import process_vision_info
+        
+        image = Image.open(request.images[0].file_path)
+        
+        prompt = f"Locate {request.query} in this image and return its bounding box coordinates as [x1, y1, x2, y2]."
+        
         messages = [
             {
                 "role": "user",
                 "content": [
                     {"type": "image", "image": image},
-                    {"type": "text", "text": ground_prompt},
+                    {"type": "text", "text": prompt},
                 ],
             }
         ]
-
-        text_prompt = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = processor(text=[text_prompt], images=[image], padding=True, return_tensors="pt")
-
-        device = next(model.parameters()).device
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-
+        
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        image_inputs, video_inputs = process_vision_info(messages)
+        
+        inputs = processor(
+            text=[text],
+            images=image_inputs,
+            videos=video_inputs,
+            padding=True,
+            return_tensors="pt"
+        ).to(model.device)
+        
         output_ids = model.generate(**inputs, max_new_tokens=256)
-        generated_ids = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], output_ids)]
-        output_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
-
-        bbox = parse_bbox_from_text(output_text, label=request.query)
-
-        if bbox is None:
-            logger.warning(f"Failed to parse bounding box from model output: '{output_text}'")
+        
+        # Trim generated tokens that were in input
+        generated_ids = [
+            out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, output_ids)
+        ]
+        
+        decoded_text = processor.batch_decode(
+            generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+        )[0]
+        
+        box = parse_bbox_from_text(decoded_text)
+        
+        if box:
             return SpecialistResponse(
                 task="grounding",
-                answer=f"Grounding failed: Coordinate parsing failed from model response '{output_text[:100]}...'",
+                answer=decoded_text,
+                bounding_boxes=[box],
+                confidence=0.9,
+                confidence_tier="high",
+                status="success",
+                model_used="Qwen2.5-VL-3B-Instruct",
+                evidence="Object localized in image coordinates."
+            )
+        else:
+            return SpecialistResponse(
+                task="grounding",
+                answer=decoded_text,
                 confidence=0.0,
                 confidence_tier="insufficient",
                 status="error",
-                error_message="Coordinate parsing failed from model output.",
+                error_message="Coordinate parsing failed: model output did not contain valid [x1,y1,x2,y2] pattern"
             )
-
-        return SpecialistResponse(
-            task="grounding",
-            answer=f"Grounded region for '{request.query}': Bounding box [{bbox.xmin:.0f}, {bbox.ymin:.0f}, {bbox.xmax:.0f}, {bbox.ymax:.0f}]",
-            confidence=0.82,
-            confidence_tier="high",
-            bounding_boxes=[bbox],
-            evidence=["Visual localization within normalized image space (0-1000)"],
-            model_used="Qwen2.5-VL-3B-Instruct",
-            status="success",
-        )
-
+            
     except Exception as e:
-        logger.error(f"Grounding exception: {e}")
+        logger.exception("Exception occurred during grounding execution")
         return SpecialistResponse(
             task="grounding",
-            answer=f"Grounding error: {e}",
+            answer="",
             confidence=0.0,
             confidence_tier="insufficient",
             status="error",
-            error_message=str(e),
+            error_message=f"Exception during grounding generation: {str(e)}"
         )

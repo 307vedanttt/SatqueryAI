@@ -1,49 +1,33 @@
 """
-SatQuery AI — Single Image VQA Specialist (Person B)
-
-Executes visual question answering using Qwen2.5-VL-3B-Instruct.
-Note: Qwen2.5-VL is a general-purpose vision-language model, not remote-sensing specialized.
+VQA operations using Qwen2.5-VL-3B-Instruct.
 """
-
 import logging
 from PIL import Image
 from schemas.contracts import SpecialistRequest, SpecialistResponse
 from models.vqa.model_loader import get_model_and_processor
 
-logger = logging.getLogger("satquery.models.vqa.vqa")
-
+logger = logging.getLogger(__name__)
 
 def run_vqa(request: SpecialistRequest) -> SpecialistResponse:
-    """Run VQA on a single image."""
-    if len(request.images) != 1:
+    """
+    Runs Visual Question Answering on exactly one image using the provided query.
+    """
+    if not request.images or len(request.images) != 1:
         return SpecialistResponse(
             task="vqa",
-            answer="Error: VQA requires exactly 1 image.",
+            answer="",
             confidence=0.0,
             confidence_tier="insufficient",
             status="error",
-            error_message=f"VQA requires exactly 1 image, got {len(request.images)}",
+            error_message="run_vqa requires exactly 1 image in the request."
         )
-
-    image_info = request.images[0]
-    file_path = image_info.file_path
-
-    try:
-        image = Image.open(file_path).convert("RGB")
-    except Exception as e:
-        logger.error(f"Failed to open image file '{file_path}': {e}")
-        return SpecialistResponse(
-            task="vqa",
-            answer=f"Error loading image: {e}",
-            confidence=0.0,
-            confidence_tier="insufficient",
-            status="error",
-            error_message=str(e),
-        )
-
+        
     try:
         model, processor = get_model_and_processor()
-
+        from qwen_vl_utils import process_vision_info
+        
+        image = Image.open(request.images[0].file_path)
+        
         messages = [
             {
                 "role": "user",
@@ -53,37 +37,46 @@ def run_vqa(request: SpecialistRequest) -> SpecialistResponse:
                 ],
             }
         ]
-
-        text_prompt = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = processor(text=[text_prompt], images=[image], padding=True, return_tensors="pt")
-
-        device = next(model.parameters()).device
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-
+        
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        image_inputs, video_inputs = process_vision_info(messages)
+        
+        inputs = processor(
+            text=[text],
+            images=image_inputs,
+            videos=video_inputs,
+            padding=True,
+            return_tensors="pt"
+        ).to(model.device)
+        
         output_ids = model.generate(**inputs, max_new_tokens=256)
+        
+        # Trim generated tokens that were in input
         generated_ids = [
-            out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], output_ids)
+            out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, output_ids)
         ]
-        output_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
-
+        
+        decoded_text = processor.batch_decode(
+            generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+        )[0]
+        
         return SpecialistResponse(
             task="vqa",
-            answer=output_text.strip(),
-            confidence=0.85,
+            answer=decoded_text,
+            confidence=0.9,
             confidence_tier="high",
-            bounding_boxes=[],
-            evidence=["Generated from full-image analysis, no region-specific grounding applied"],
-            model_used="Qwen2.5-VL-3B-Instruct",
             status="success",
+            model_used="Qwen2.5-VL-3B-Instruct",
+            evidence="Generated from full-image analysis, no region-specific grounding applied"
         )
-
+        
     except Exception as e:
-        logger.error(f"VQA generation exception: {e}")
+        logger.exception("Exception occurred during VQA execution")
         return SpecialistResponse(
             task="vqa",
-            answer=f"Model generation error: {e}",
+            answer="",
             confidence=0.0,
             confidence_tier="insufficient",
             status="error",
-            error_message=str(e),
+            error_message=f"Exception during VQA generation: {str(e)}"
         )

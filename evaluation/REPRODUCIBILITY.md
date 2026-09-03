@@ -1,37 +1,40 @@
-# SatQuery AI — Reproducibility Checklist & Pre-Presentation Guide
+# SatQuery AI — Reproducibility & Demo Checklist
 
-## 1. Environment Setup Checklist
+## Environment Setup
+- [ ] Python 3.11+ installed (Recommended: conda or venv)
+- [ ] `pip install -r requirements.txt` (from repo root)
+- [ ] (Optional) GPU with CUDA for fast inference
+- [ ] Verify PyTorch installation with CUDA support (if available)
+- [ ] Check rasterio and GDAL installations (often tricky on Windows/Mac, consider conda if issues arise)
 
-- [ ] Python 3.10+ installed
-- [ ] Dependencies installed via `make install` or `pip install -r backend/requirements.txt`
-- [ ] PyTorch & torchvision installed (GPU/CUDA verified if available: `python -c "import torch; print(torch.cuda.is_available())"`)
-- [ ] Environment validated via `python scripts/validate_environment.py`
+## Model Downloads
+- [ ] Qwen2.5-VL-3B-Instruct (~6GB): will auto-download on first run of models/vqa/
+- [ ] Download custom pre-trained checkpoints (if any) and place them in `models/weights/`
+- [ ] Ensure enough disk space (~20GB recommended) for model caching
 
-## 2. Model Downloads & Caching
+## Data Preparation
+- [ ] Populate `data/` directory with sample images corresponding to evaluation sets
+- [ ] Run `python -m evaluation.run_eval` to ensure the pipeline runs without fatal errors
+- [ ] Verify test image paths in `evaluation/test_set.py`
 
-- Qwen2.5-VL-3B-Instruct model weights cached on first run (`Qwen/Qwen2.5-VL-3B-Instruct`).
-- Fallback CPU float32 mode active if no CUDA GPU present.
+## Running the Backend
+- [ ] Start the FastAPI backend server from repo root: `uvicorn backend.main:app --reload`
+- [ ] Verify the API is up at `http://localhost:8000/docs`
+- [ ] Check logs for any initialization errors from model loaders
 
-## 3. Launching the Demo
+## Running the Frontend
+- [ ] Install dependencies (e.g., `pip install gradio`)
+- [ ] Start the frontend interface from repo root: `python frontend/app.py`
+- [ ] By default, the Gradio demo calls the Executor directly to minimize moving parts. To use the HTTP API instead, update the analyze function in `app.py` to use `requests.post` to `http://localhost:8000/query`.
 
-### Option A: Gradio Demo UI (Primary Presentation)
-```bash
-python frontend/app.py
-```
-Access at http://localhost:7860
+## Pre-Presentation Checklist
+- [ ] Sample images loaded and tested via the UI
+- [ ] Demo queries pre-typed and tested (warm-up models to avoid first-run latency)
+- [ ] Screen recording backup available (in case of live demo failure)
+- [ ] Backup laptop/tablet ready with a pre-recorded demo video
+- [ ] Clear cache if demonstrating fresh runs
 
-### Option B: FastAPI Backend + React UI
-```bash
-make dev
-```
-- API Docs: http://localhost:8000/docs
-- React UI: http://localhost:5173
-
-## 4. Pre-Presentation Checklist
-
-- [ ] Sample single optical GeoTIFF ready
-- [ ] Sample Optical + SAR pair ready
-- [ ] Sample bi-temporal image pair ready
-- [ ] Pre-selected queries tested on Gradio UI
-- [ ] `python scripts/manual_test_agent.py` executed successfully
-- [ ] `python evaluation/run_eval.py` executed successfully
+## Troubleshooting
+- **Out of Memory (OOM):** Ensure GPU has at least 8GB VRAM for the 3B model. Use CPU fallback or quantization if needed.
+- **Model downloading slowly:** Pre-download weights manually using `huggingface-cli download`.
+- **Rasterio errors:** Verify GDAL paths. `conda install -c conda-forge rasterio` is highly recommended.

@@ -1,15 +1,13 @@
 """
-agent package init.
-"""
-from agent.registry import ToolRegistry
-from agent.router import Router
-from agent.executor import Executor
-from agent.trace import format_trace_for_display, format_trace_as_dict
+agent/ — Agentic Orchestration Core for SatQuery AI
 
-__all__ = [
-    "ToolRegistry",
-    "Router",
-    "Executor",
-    "format_trace_for_display",
-    "format_trace_as_dict",
-]
+This package implements the BOUNDED, DETERMINISTIC routing and execution brain.
+Import order: registry → router → executor → trace
+
+Usage:
+    from agent.executor import Executor
+    from schemas.contracts import SpecialistRequest, ImageMetadata
+
+    request = SpecialistRequest(query="...", images=[...])
+    response, trace = Executor().run(request)
+"""

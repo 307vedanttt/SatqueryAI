@@ -1,67 +1,60 @@
 """
-SatQuery AI — Model Loader (Person B)
+Singleton loader for Qwen2.5-VL-3B-Instruct model.
 
-Singleton model loader for Qwen2.5-VL-3B-Instruct.
-Loads model into GPU (if available) or CPU float32 fallback ONCE per process.
+IMPORTANT: torch is imported lazily inside get_model_and_processor() so that
+this module can be imported in CI/tests WITHOUT torch installed.
+The mocked unit tests in tests/test_vqa.py patch get_model_and_processor
+directly and never trigger the real import path.
 """
-
 import logging
-import torch
-from typing import Tuple, Any, Optional
+from typing import Tuple
 
-logger = logging.getLogger("satquery.models.vqa.model_loader")
+logger = logging.getLogger(__name__)
 
-_MODEL_ID = "Qwen/Qwen2.5-VL-3B-Instruct"
-_CACHED_MODEL: Optional[Any] = None
-_CACHED_PROCESSOR: Optional[Any] = None
+_model = None
+_processor = None
+
+def get_model_and_processor() -> Tuple:
+    """
+    Loads and returns the Qwen2.5-VL-3B-Instruct model and processor.
+    Uses cached global instances if already loaded.
+    """
+    global _model, _processor
+    
+    if is_model_loaded():
+        return _model, _processor
+
+    logger.info("Loading Qwen2.5-VL-3B-Instruct model...")
+
+    try:
+        import torch
+        from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
+    except ImportError as exc:
+        logger.error("Required packages not installed: %s", exc)
+        raise
+
+    if torch.cuda.is_available():
+        logger.info("GPU detected, loading model on GPU with bfloat16")
+        _model = Qwen2VLForConditionalGeneration.from_pretrained(
+            "Qwen/Qwen2.5-VL-3B-Instruct",
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+        )
+    else:
+        logger.warning(
+            "GPU not detected. Loading Qwen2.5-VL-3B-Instruct on CPU with float32. "
+            "Inference will be slow — a working slow demo beats a broken fast one."
+        )
+        _model = Qwen2VLForConditionalGeneration.from_pretrained(
+            "Qwen/Qwen2.5-VL-3B-Instruct",
+            torch_dtype=torch.float32,
+        )
+
+    _processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-3B-Instruct")
+
+    return _model, _processor
 
 
 def is_model_loaded() -> bool:
-    """Return True if model and processor are cached in memory."""
-    return _CACHED_MODEL is not None and _CACHED_PROCESSOR is not None
-
-
-def get_model_and_processor() -> Tuple[Any, Any]:
-    """
-    Get or load Qwen2.5-VL-3B-Instruct singleton.
-    
-    GPU: bfloat16 / float16 with device_map="auto"
-    CPU: float32 fallback with clear logging
-    """
-    global _CACHED_MODEL, _CACHED_PROCESSOR
-
-    if is_model_loaded():
-        return _CACHED_MODEL, _CACHED_PROCESSOR
-
-    logger.info(f"Loading singleton model: {_MODEL_ID}")
-
-    try:
-        from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
-
-        has_gpu = torch.cuda.is_available()
-        if has_gpu:
-            logger.info("GPU detected — loading Qwen2.5-VL with float16 / device_map='auto'")
-            model = Qwen2VLForConditionalGeneration.from_pretrained(
-                _MODEL_ID,
-                torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
-                device_map="auto",
-            )
-        else:
-            logger.warning("No GPU detected — loading Qwen2.5-VL on CPU in float32 (inference will be slow)")
-            model = Qwen2VLForConditionalGeneration.from_pretrained(
-                _MODEL_ID,
-                torch_dtype=torch.float32,
-                device_map="cpu",
-            )
-
-        processor = AutoProcessor.from_pretrained(_MODEL_ID)
-
-        _CACHED_MODEL = model
-        _CACHED_PROCESSOR = processor
-
-        logger.info(f"Successfully loaded and cached {_MODEL_ID}")
-        return _CACHED_MODEL, _CACHED_PROCESSOR
-
-    except Exception as e:
-        logger.error(f"Failed to load {_MODEL_ID}: {e}")
-        raise RuntimeError(f"Model load error for {_MODEL_ID}: {e}")
+    """Checks if the global model and processor are loaded."""
+    return _model is not None and _processor is not None
