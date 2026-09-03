@@ -83,6 +83,14 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onSelectTab, health }
             {health ? 'ONLINE' : 'OFFLINE'}
           </span>
         </div>
+
+        <button
+          type="button"
+          title="System Telemetry & Session Configuration"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer border border-transparent hover:border-slate-700 ml-1"
+        >
+          ⚙
+        </button>
       </div>
     </header>
   );

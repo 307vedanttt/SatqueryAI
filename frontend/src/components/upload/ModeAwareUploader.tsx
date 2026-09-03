@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import type { InputConfiguration, UploadedFileInfo } from '../../types';
+import { ConfigurationSelector } from './ConfigurationSelector';
 
 export type AnalysisMode = 'single' | 'optical-sar' | 'bi-temporal';
 
@@ -59,8 +60,9 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
 
   const renderSlot = (
     slotIndex: number,
-    label: string,
-    subLabel: string,
+    roleTitle: string,
+    roleBadge: string,
+    roleSubtitle: string,
     icon: string,
     file: File | null,
     info: UploadedFileInfo | null,
@@ -73,17 +75,21 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
       <div
         className={`relative flex-1 rounded-xl transition-all p-3.5 flex flex-col justify-between border ${
           file
-            ? 'bg-[#111c30] border-blue-500/40 shadow-sm'
-            : 'bg-[#0b1220]/60 border-slate-800 hover:border-slate-700 hover:bg-[#0e1626]/80 border-dashed'
+            ? 'bg-[#0f172a] border-cyan-500/40 shadow-sm'
+            : 'bg-[#0a101d] border-slate-800 hover:border-slate-700 hover:bg-[#0c1322] border-dashed'
         }`}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDropSlot(e, slotIndex)}
       >
+        {/* Slot Header */}
         <div className="flex justify-between items-center mb-2.5">
           <div className="flex items-center gap-2">
             <span className="text-sm">{icon}</span>
             <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-200">
-              {label}
+              {roleTitle}
+            </span>
+            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-cyan-400 font-semibold uppercase">
+              {roleBadge}
             </span>
           </div>
 
@@ -91,8 +97,8 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
             <button
               type="button"
               onClick={() => onRemoveFile(slotIndex)}
-              className="text-slate-400 hover:text-red-400 text-[11px] font-mono px-2 py-0.5 rounded hover:bg-slate-800/80 transition-colors cursor-pointer"
-              title="Remove this imagery"
+              className="text-slate-400 hover:text-red-400 text-[11px] font-mono px-1.5 py-0.5 rounded hover:bg-slate-800/80 transition-colors cursor-pointer"
+              title="Remove imagery"
             >
               ✕ Remove
             </button>
@@ -100,8 +106,8 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
         </div>
 
         {file ? (
-          /* File Loaded Card */
-          <div className="flex items-center gap-3 my-1 p-2 rounded-lg bg-[#0a101d] border border-slate-800/80">
+          /* File Loaded Summary */
+          <div className="flex items-center gap-3 my-1 p-2 rounded-lg bg-[#070d18] border border-slate-800/80">
             {previewUrl ? (
               <img
                 src={previewUrl}
@@ -109,9 +115,9 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
                 className="w-12 h-12 rounded-md object-cover border border-slate-700 shrink-0"
               />
             ) : (
-              <div className="w-12 h-12 rounded-md bg-[#0d1627] border border-blue-500/30 flex flex-col items-center justify-center shrink-0">
-                <span className="text-base">🛰️</span>
-                <span className="text-[9px] font-mono text-cyan-400 font-bold uppercase">TIFF</span>
+              <div className="w-12 h-12 rounded-md bg-[#0d1627] border border-cyan-500/30 flex flex-col items-center justify-center shrink-0">
+                <span className="text-sm">🛰️</span>
+                <span className="text-[8px] font-mono text-cyan-400 font-bold uppercase">GeoTIFF</span>
               </div>
             )}
 
@@ -122,9 +128,9 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
               <div className="text-[10px] font-mono text-slate-400 flex items-center gap-2 mt-1">
                 <span>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
                 <span>•</span>
-                <span className="px-1.5 py-0.2 rounded bg-blue-950/80 text-blue-300 border border-blue-800/40 uppercase font-semibold">
-                  {info?.metadata?.image_type || (isGeoTIFF ? 'GeoTIFF' : 'Raster')}
-                </span>
+                <span>{info?.metadata?.width ? `${info.metadata.width}×${info.metadata.height}` : '4096×4096'}</span>
+                <span>•</span>
+                <span className="text-cyan-400 uppercase font-semibold">{info?.metadata?.crs || 'EPSG:4326'}</span>
               </div>
             </div>
           </div>
@@ -134,14 +140,14 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
             className="flex flex-col items-center justify-center py-5 cursor-pointer text-center group"
             onClick={() => inputRef.current?.click()}
           >
-            <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 group-hover:border-cyan-500/40 transition-all mb-2">
-              <span className="text-lg">⬆</span>
+            <div className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 group-hover:border-cyan-500/40 transition-all mb-1.5">
+              <span className="text-base">⬆</span>
             </div>
             <span className="text-xs font-semibold text-slate-300 group-hover:text-white transition-colors">
-              {subLabel}
+              {roleSubtitle}
             </span>
             <span className="text-[10px] text-slate-500 mt-1 font-mono">
-              GeoTIFF (.tif), PNG, JPG up to 100MB
+              GeoTIFF · TIFF · PNG · JPG · Max 100 MB
             </span>
           </div>
         )}
@@ -164,15 +170,15 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
 
         {file && (
           <div className="pt-2 mt-2 border-t border-slate-800/60 flex justify-between items-center text-[10px] font-mono">
-            <span className="text-emerald-400 flex items-center gap-1">
-              <span>✓</span> Ingested & Validated
+            <span className="text-emerald-400 flex items-center gap-1 font-semibold">
+              <span>✓</span> Validated
             </span>
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
               className="text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer"
             >
-              Replace
+              Replace File
             </button>
           </div>
         )}
@@ -181,130 +187,114 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
   };
 
   return (
-    <div className="mode-aware-uploader flex flex-col gap-3">
-      {/* Segmented Mode Selector Switch */}
-      <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-xl bg-[#0c1322] border border-slate-800/80">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-              mode === 'single'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-            onClick={() => onModeChange('single')}
-          >
-            <span>🛰️</span>
-            <span>Single Scene</span>
-          </button>
+    <div className="mode-aware-uploader flex flex-col gap-4">
+      {/* 3 Configuration Selector Cards */}
+      <ConfigurationSelector
+        selectedMode={mode}
+        onSelectMode={onModeChange}
+        disabled={isUploading}
+      />
 
-          <button
-            type="button"
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-              mode === 'optical-sar'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-            onClick={() => onModeChange('optical-sar')}
-          >
-            <span>📡</span>
-            <span>Optical + SAR Pair</span>
-          </button>
+      {/* Upload Drop Slots for Active Configuration */}
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-between items-center px-1">
+          <div className="flex items-center gap-2">
+            <label className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-cyan-400">📤</span>
+              <span>Upload Satellite Imagery</span>
+            </label>
+            {isDual && files.length === 2 && (
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded font-semibold flex items-center gap-1">
+                <span>✓</span> Co-registration Aligned
+              </span>
+            )}
+          </div>
 
-          <button
-            type="button"
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-              mode === 'bi-temporal'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-            onClick={() => onModeChange('bi-temporal')}
-          >
-            <span>⏱️</span>
-            <span>Bi-Temporal Change</span>
-          </button>
+          {files.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-slate-400">
+                {files.length} {files.length === 1 ? 'file' : 'files'} loaded
+              </span>
+              <button
+                type="button"
+                onClick={onClearAll}
+                className="text-[10px] font-mono text-slate-400 hover:text-red-400 px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700/60 hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
         </div>
 
-        {files.length > 0 && (
-          <div className="flex items-center gap-2 pr-1">
-            <span className="text-[11px] font-mono text-slate-400">
-              {files.length} {files.length === 1 ? 'file' : 'files'} active
-            </span>
-            <button
-              type="button"
-              onClick={onClearAll}
-              className="text-[10px] font-mono text-slate-400 hover:text-red-400 px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700/60 hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              Reset All
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Upload Drop Slots */}
-      <div className={`grid gap-3 ${isDual ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
-        {mode === 'single' && (
-          renderSlot(
-            0,
-            'Satellite Scene',
-            'Click or drop satellite imagery here',
-            '🛰️',
-            file1,
-            info1,
-            fileInputRef1
-          )
-        )}
-
-        {mode === 'optical-sar' && (
-          <>
-            {renderSlot(
+        <div className={`grid gap-3 ${isDual ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+          {mode === 'single' && (
+            renderSlot(
               0,
-              'Optical Sensor (Multispectral)',
-              'Upload Sentinel-2 or Optical Scene',
+              'Satellite Scene',
+              'Optical / SAR',
+              'Drag & drop imagery here or browse files',
               '🛰️',
               file1,
               info1,
               fileInputRef1
-            )}
-            {renderSlot(
-              1,
-              'SAR Sensor (Radar)',
-              'Upload Sentinel-1 SAR Intensity Raster',
-              '📡',
-              file2,
-              info2,
-              fileInputRef2
-            )}
-          </>
-        )}
+            )
+          )}
 
-        {mode === 'bi-temporal' && (
-          <>
-            {renderSlot(
-              0,
-              'T1 — Pre-Event Baseline (Before)',
-              'Upload Initial Acquisition (T1)',
-              '⏱️',
-              file1,
-              info1,
-              fileInputRef1
-            )}
-            {renderSlot(
-              1,
-              'T2 — Post-Event Target (After)',
-              'Upload Comparison Acquisition (T2)',
-              '⏱️',
-              file2,
-              info2,
-              fileInputRef2
-            )}
-          </>
-        )}
+          {mode === 'optical-sar' && (
+            <>
+              {renderSlot(
+                0,
+                'Optical Sensor',
+                'RGB / NIR',
+                'Upload Sentinel-2 or Optical Image',
+                '🛰️',
+                file1,
+                info1,
+                fileInputRef1
+              )}
+              {renderSlot(
+                1,
+                'SAR Sensor',
+                'VV / VH Radar',
+                'Upload Sentinel-1 SAR Intensity Raster',
+                '📡',
+                file2,
+                info2,
+                fileInputRef2
+              )}
+            </>
+          )}
+
+          {mode === 'bi-temporal' && (
+            <>
+              {renderSlot(
+                0,
+                'T1 — Pre-Event Baseline',
+                'Earlier Date',
+                'Upload Baseline Acquisition (T1)',
+                '⏱️',
+                file1,
+                info1,
+                fileInputRef1
+              )}
+              {renderSlot(
+                1,
+                'T2 — Post-Event Target',
+                'Later Date',
+                'Upload Comparison Acquisition (T2)',
+                '⏱️',
+                file2,
+                info2,
+                fileInputRef2
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Ingestion Loading Status */}
       {isUploading && (
-        <div className="p-2.5 rounded-lg bg-blue-950/30 border border-blue-800/40 flex items-center gap-2.5 text-xs font-mono text-blue-300">
+        <div className="p-2.5 rounded-lg bg-blue-950/30 border border-blue-800/40 flex items-center gap-2.5 text-xs font-mono text-cyan-300">
           <span className="w-3.5 h-3.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin shrink-0" />
           <span>Ingesting raster, extracting metadata & verifying spatial bounds...</span>
         </div>
@@ -335,7 +325,7 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
                 </span>
               )}
             </div>
-            <span className="text-slate-500 hover:text-slate-300">{showDetails ? '▲ Hide' : '▼ View'}</span>
+            <span className="text-slate-500 hover:text-slate-300">{showDetails ? '▲ Hide Details' : '▼ View Details'}</span>
           </button>
 
           {showDetails && (
@@ -350,8 +340,8 @@ export const ModeAwareUploader: React.FC<ModeAwareUploaderProps> = ({
                     <div>GeoTIFF: <span className="text-slate-200 font-semibold">{item.is_geotiff ? 'Yes' : 'No'}</span></div>
                     <div>Sensor: <span className="text-slate-200 font-semibold">{item.metadata?.sensor || 'Optical'}</span></div>
                     <div>Resolution: <span className="text-slate-200 font-semibold">{item.metadata?.resolution ? `${item.metadata.resolution[0]}m` : '10m GSD'}</span></div>
-                    <div>CRS: <span className="text-slate-200 font-semibold truncate block">{item.metadata?.crs || 'EPSG:32643'}</span></div>
-                    <div>Dimensions: <span className="text-slate-200 font-semibold">{item.metadata?.width ? `${item.metadata.width}×${item.metadata.height} px` : '1920×1080 px'}</span></div>
+                    <div>CRS: <span className="text-slate-200 font-semibold truncate block">{item.metadata?.crs || 'EPSG:4326'}</span></div>
+                    <div>Dimensions: <span className="text-slate-200 font-semibold">{item.metadata?.width ? `${item.metadata.width}×${item.metadata.height} px` : '4096×4096 px'}</span></div>
                   </div>
                 </div>
               ))}

@@ -4,13 +4,12 @@ import type {
   InputConfiguration,
   UploadedFileInfo,
 } from '../types';
+import { WorkflowSidebar } from '../components/layout/WorkflowSidebar';
 import { ModeAwareUploader, type AnalysisMode } from '../components/upload/ModeAwareUploader';
 import { ImageViewer } from '../components/viewer/ImageViewer';
 import { QuerySection } from '../components/analysis/QuerySection';
 import { AnalysisProgress } from '../components/analysis/AnalysisProgress';
-import { ResponsePanel } from '../components/analysis/ResponsePanel';
-import { EvidencePanel } from '../components/evidence/EvidencePanel';
-import { ExecutionTrace } from '../components/trace/ExecutionTrace';
+import { EvidenceAndResultsPanel } from '../components/analysis/EvidenceAndResultsPanel';
 import { runAnalysis, uploadFiles } from '../services/api';
 
 interface WorkspaceProps {
@@ -35,7 +34,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
   // Switch analysis modes
   const handleModeChange = (newMode: AnalysisMode) => {
     setMode(newMode);
-    // Clear previous results when intentionally switching workflow modes
     setAnalysisResult(null);
     setError(null);
   };
@@ -101,7 +99,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
     setActiveEvidenceId(null);
   };
 
-  // Quick Demo Presets
+  // Quick Demo Scenarios
   const handleLoadDemoPreset = (presetType: 'vqa' | 'grounding' | 'optical-sar' | 'change') => {
     setError(null);
     setAnalysisResult(null);
@@ -116,14 +114,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
       setMode('single');
       const f = new File([''], 'bangalore_urban_area.tif', { type: 'image/tiff' });
       setFiles([f]);
-      setQuery('Where are the buildings?');
+      setQuery('Where are the major buildings?');
       handleFilesSelected([f]);
     } else if (presetType === 'optical-sar') {
       setMode('optical-sar');
       const f1 = new File([''], 'sentinel2_optical.tif', { type: 'image/tiff' });
       const f2 = new File([''], 'sentinel1_sar_vv.tif', { type: 'image/tiff' });
       setFiles([f1, f2]);
-      setQuery('What complementary information do these images provide?');
+      setQuery('What complementary information do these sensors provide?');
       handleFilesSelected([f1, f2]);
     } else if (presetType === 'change') {
       setMode('bi-temporal');
@@ -159,7 +157,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
         onRecordHistory(resp, query.trim());
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Analysis reasoning pipeline failed.';
+      const msg = err instanceof Error ? err.message : 'Specialist analysis could not be completed.';
       setError(msg);
     } finally {
       setIsAnalyzing(false);
@@ -179,81 +177,70 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
       : undefined);
 
   return (
-    <div className="workspace-page flex flex-col gap-5">
-      {/* 5-Step Remote Sensing Analysis Workflow */}
-      <div className="workflow-steps hidden sm:flex items-center justify-between p-2.5 rounded-xl bg-[#0a101d] border border-slate-800/80 text-[11px] font-mono text-slate-400">
-        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
-          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">1</span>
-          <span>Upload Imagery</span>
-        </div>
-        <span className="text-slate-600">→</span>
-        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
-          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">2</span>
-          <span>Select Configuration</span>
-        </div>
-        <span className="text-slate-600">→</span>
-        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
-          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">3</span>
-          <span>Ask Question</span>
-        </div>
-        <span className="text-slate-600">→</span>
-        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
-          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">4</span>
-          <span>Run Specialist</span>
-        </div>
-        <span className="text-slate-600">→</span>
-        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
-          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">5</span>
-          <span>Evidence Result</span>
-        </div>
-      </div>
-
-      {/* Top Demo Quick-Bar */}
-      <div className="demo-bar flex flex-wrap items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#0c1322] border border-slate-800/80 shadow-sm">
+    <div className="workspace-page flex flex-col gap-4">
+      {/* Top Quick Scenarios Bar */}
+      <div className="demo-bar flex flex-wrap items-center justify-between gap-2.5 p-2 rounded-xl bg-[#0a101d] border border-slate-800/80 shadow-sm">
         <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-          <span className="text-cyan-400">⚡</span>
-          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-            QUICK SCENARIOS:
-          </span>
+          <span className="text-cyan-400 font-bold text-xs pl-1">⚡ SCENARIOS:</span>
           <button
             type="button"
-            className="px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
+            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('vqa')}
           >
             1. Single VQA
           </button>
           <button
             type="button"
-            className="px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
+            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('grounding')}
           >
             2. Grounding
           </button>
           <button
             type="button"
-            className="px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
+            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('optical-sar')}
           >
             3. Optical + SAR
           </button>
           <button
             type="button"
-            className="px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
+            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('change')}
           >
             4. Bi-Temporal Change
           </button>
         </div>
 
-        <div className="text-[11px] font-mono text-slate-500 hidden md:block">
-          Select scenario or drag imagery below to initiate analysis.
+        <div className="text-[11px] font-mono text-slate-500 hidden lg:block pr-2">
+          Select scenario or drag satellite imagery into the workspace.
         </div>
       </div>
 
-      {/* Main Two-Column Analysis Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left Column: IMAGE WORKSPACE (Col 1 to 7) */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
+      {/* Main 3-Column Workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_390px] gap-4 items-start">
+        {/* Column 1: Left Workflow Sidebar (240px) */}
+        <div className="hidden lg:block">
+          <WorkflowSidebar
+            hasFiles={files.length > 0}
+            hasQuery={Boolean(query.trim())}
+            isAnalyzing={isAnalyzing}
+            result={analysisResult}
+          />
+        </div>
+
+        {/* Column 2: Center Main Analysis Workspace */}
+        <div className="flex flex-col gap-4 min-w-0">
+          {/* Imagery Viewer */}
+          <ImageViewer
+            files={uploadedInfos}
+            rawFiles={files}
+            evidence={analysisResult?.evidence || []}
+            activeEvidenceId={activeEvidenceId}
+            onClearActiveEvidence={() => setActiveEvidenceId(null)}
+          />
+
+          {/* Configuration & Ingestion */}
           <ModeAwareUploader
             mode={mode}
             onModeChange={handleModeChange}
@@ -268,17 +255,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
             detectedConfiguration={detectedConfig}
           />
 
-          <ImageViewer
-            files={uploadedInfos}
-            rawFiles={files}
-            evidence={analysisResult?.evidence || []}
-            activeEvidenceId={activeEvidenceId}
-            onClearActiveEvidence={() => setActiveEvidenceId(null)}
-          />
-        </div>
-
-        {/* Right Column: AI ANALYSIS & REASONING PANEL (Col 8 to 12) */}
-        <div className="lg:col-span-5 flex flex-col gap-4">
+          {/* Ask Question & Analyze */}
           <QuerySection
             query={query}
             onQueryChange={setQuery}
@@ -286,33 +263,25 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
             onClear={() => setQuery('')}
             isAnalyzing={isAnalyzing}
             canAnalyze={uploadedInfos.length > 0 && query.trim().length > 0 && !isUploading}
+            hasResult={Boolean(analysisResult)}
             configuration={detectedConfig}
           />
 
+          {/* Analysis Progress indicator during execution */}
           <AnalysisProgress isAnalyzing={isAnalyzing} />
+        </div>
 
-          <ResponsePanel
+        {/* Column 3: Right Evidence & AI Results Panel (390px) */}
+        <div className="w-full">
+          <EvidenceAndResultsPanel
             result={analysisResult}
             isLoading={isAnalyzing}
+            activeEvidenceId={activeEvidenceId}
+            onFocusEvidence={(id) => setActiveEvidenceId(id)}
+            onClearTrace={() => setAnalysisResult(null)}
           />
-
-          {/* Supporting Evidence categorized directly below the response */}
-          {analysisResult && (
-            <EvidencePanel
-              evidence={analysisResult.evidence || []}
-              activeEvidenceId={activeEvidenceId}
-              onFocusEvidence={(id) => setActiveEvidenceId(id)}
-            />
-          )}
         </div>
       </div>
-
-      {/* Bottom Section: EXECUTION TRACE (Full Width) */}
-      {analysisResult?.execution_trace && analysisResult.execution_trace.length > 0 && (
-        <div className="w-full mt-2">
-          <ExecutionTrace steps={analysisResult.execution_trace} />
-        </div>
-      )}
     </div>
   );
 };
