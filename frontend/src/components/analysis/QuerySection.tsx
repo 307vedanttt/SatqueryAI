@@ -81,21 +81,30 @@ export const QuerySection: React.FC<QuerySectionProps> = ({
               type="button"
               onClick={onSubmit}
               disabled={!canAnalyze || isAnalyzing}
+              title={
+                !canAnalyze
+                  ? !query.trim()
+                    ? 'Please enter or select a query to analyze'
+                    : 'Please upload satellite imagery first'
+                  : isAnalyzing
+                  ? 'Analysis in progress...'
+                  : 'Click or press Enter to run analysis'
+              }
               className={`px-4 py-1.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wide flex items-center gap-2 transition-all ${
                 canAnalyze && !isAnalyzing
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 cursor-pointer'
+                  ? 'bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white shadow-md shadow-blue-600/30 cursor-pointer'
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/40'
               }`}
             >
               {isAnalyzing ? (
                 <>
-                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Analyzing...</span>
                 </>
               ) : (
                 <>
                   <span>🚀</span>
-                  <span>Analyze</span>
+                  <span>Analyze Imagery</span>
                 </>
               )}
             </button>

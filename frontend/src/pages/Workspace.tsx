@@ -180,6 +180,34 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
 
   return (
     <div className="workspace-page flex flex-col gap-5">
+      {/* 5-Step Remote Sensing Analysis Workflow */}
+      <div className="workflow-steps hidden sm:flex items-center justify-between p-2.5 rounded-xl bg-[#0a101d] border border-slate-800/80 text-[11px] font-mono text-slate-400">
+        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
+          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">1</span>
+          <span>Upload Imagery</span>
+        </div>
+        <span className="text-slate-600">→</span>
+        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
+          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">2</span>
+          <span>Select Configuration</span>
+        </div>
+        <span className="text-slate-600">→</span>
+        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
+          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">3</span>
+          <span>Ask Question</span>
+        </div>
+        <span className="text-slate-600">→</span>
+        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
+          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">4</span>
+          <span>Run Specialist</span>
+        </div>
+        <span className="text-slate-600">→</span>
+        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
+          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">5</span>
+          <span>Evidence Result</span>
+        </div>
+      </div>
+
       {/* Top Demo Quick-Bar */}
       <div className="demo-bar flex flex-wrap items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#0c1322] border border-slate-800/80 shadow-sm">
         <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
