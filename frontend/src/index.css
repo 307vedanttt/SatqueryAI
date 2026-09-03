@@ -62,7 +62,7 @@
 }
 
 html {
-  font-size: 15px;
+  font-size: 16.5px;
   scroll-behavior: smooth;
   color-scheme: dark;
 }
@@ -604,20 +604,20 @@ body::before {
 .font-bold { font-weight: 700; }
 .font-extrabold { font-weight: 800; }
 
-.text-\[8px\] { font-size: 8px; line-height: 10px; }
-.text-\[9px\] { font-size: 9px; line-height: 12px; }
-.text-\[10px\] { font-size: 10px; line-height: 14px; }
-.text-\[10\.5px\] { font-size: 10.5px; line-height: 14px; }
-.text-\[11px\] { font-size: 11px; line-height: 15px; }
-.text-xs { font-size: 0.75rem; line-height: 1rem; }
-.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-.text-base { font-size: 1rem; line-height: 1.5rem; }
-.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-.text-xl { font-size: 1.25rem; line-height: 1.75rem; }
-.text-2xl { font-size: 1.5rem; line-height: 2rem; }
-.text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
-.text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
-.text-5xl { font-size: 3rem; line-height: 1; }
+.text-\[8px\] { font-size: 10px; line-height: 12px; }
+.text-\[9px\] { font-size: 11px; line-height: 14px; }
+.text-\[10px\] { font-size: 12px; line-height: 16px; }
+.text-\[10\.5px\] { font-size: 12.5px; line-height: 16px; }
+.text-\[11px\] { font-size: 13px; line-height: 17px; }
+.text-xs { font-size: 0.82rem; line-height: 1.15rem; }
+.text-sm { font-size: 0.95rem; line-height: 1.35rem; }
+.text-base { font-size: 1.08rem; line-height: 1.6rem; }
+.text-lg { font-size: 1.22rem; line-height: 1.8rem; }
+.text-xl { font-size: 1.38rem; line-height: 1.95rem; }
+.text-2xl { font-size: 1.65rem; line-height: 2.15rem; }
+.text-3xl { font-size: 2rem; line-height: 2.4rem; }
+.text-4xl { font-size: 2.45rem; line-height: 2.8rem; }
+.text-5xl { font-size: 3.25rem; line-height: 1.1; }
 
 .uppercase { text-transform: uppercase; }
 .capitalize { text-transform: capitalize; }
