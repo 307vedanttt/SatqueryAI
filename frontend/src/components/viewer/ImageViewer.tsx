@@ -125,18 +125,22 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       onMouseLeave={handleMouseUp}
     >
       {/* Viewer Header */}
-      <div className="flex justify-between items-center px-4 py-2.5 bg-[#0a101d] border-b border-slate-800/80 z-20">
-        <div className="flex items-center gap-2">
-          <span className="text-cyan-400">🛰️</span>
-          <h3 className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider">
-            Imagery Viewer
+      <div className="flex justify-between items-center px-4 py-2.5 bg-[#070d1a]/90 backdrop-blur-md border-b border-slate-800/90 z-20">
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse" />
+          <h3 className="font-mono text-xs font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
+            <span>IMAGERY VIEWER</span>
+            <span className="text-[10px] text-cyan-400 font-bold bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/40">
+              {isLoaded ? '● READY' : '● STANDBY'}
+            </span>
           </h3>
+
           {hasTwoImages && (
-            <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px] font-mono ml-2">
+            <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-800 text-[11px] font-mono ml-2">
               <button
                 type="button"
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                  viewMode === 'side-by-side' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                className={`px-2.5 py-0.5 rounded transition-all cursor-pointer ${
+                  viewMode === 'side-by-side' ? 'bg-blue-600 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
                 onClick={() => setViewMode('side-by-side')}
               >
@@ -144,8 +148,8 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
               </button>
               <button
                 type="button"
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                  viewMode === 'before-after' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                className={`px-2.5 py-0.5 rounded transition-all cursor-pointer ${
+                  viewMode === 'before-after' ? 'bg-blue-600 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
                 onClick={() => setViewMode('before-after')}
               >
@@ -155,18 +159,11 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
           )}
         </div>
 
-        {/* Right Status */}
-        <div className="flex items-center gap-2">
-          <span
-            className={`font-mono text-[11px] px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${
-              isLoaded
-                ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60 font-semibold'
-                : 'bg-slate-900 text-slate-500 border-slate-800'
-            }`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${isLoaded ? 'bg-emerald-400' : 'bg-slate-500'}`} />
-            <span>{isLoaded ? 'Imagery Ready' : 'No Imagery Loaded'}</span>
-          </span>
+        {/* Right Status / Telemetry */}
+        <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-400">
+          <span className="hidden sm:inline">GSD: 10m/PX</span>
+          <span className="text-slate-600">•</span>
+          <span className="text-cyan-400">{files[0]?.metadata?.crs || 'EPSG:4326'}</span>
         </div>
       </div>
 
@@ -225,15 +222,23 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
           </button>
         </div>
 
+        {/* Reticle Corner Brackets */}
+        <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400/80 pointer-events-none z-20" />
+        <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400/80 pointer-events-none z-20" />
+        <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400/80 pointer-events-none z-20" />
+        <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400/80 pointer-events-none z-20" />
+
         {/* Empty State when no imagery is loaded */}
         {!isLoaded ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl text-slate-500 mb-3 shadow-inner">
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
+            <div className="w-16 h-16 rounded-2xl bg-[#0a1224] border border-cyan-500/30 flex items-center justify-center text-3xl text-cyan-400 mb-3 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
               🛰️
             </div>
-            <div className="text-sm font-bold text-slate-200">No Satellite Imagery</div>
-            <p className="text-xs text-slate-500 max-w-sm mt-1 leading-relaxed font-sans">
-              Upload a GeoTIFF, TIFF, PNG or JPG using the uploader below or select a quick scenario.
+            <div className="text-base font-extrabold text-slate-100 uppercase tracking-wide">
+              Satellite imagery required
+            </div>
+            <p className="text-xs text-slate-400 max-w-sm mt-1.5 leading-relaxed font-sans">
+              Upload GeoTIFF or supported imagery to begin analysis, or select a quick scenario.
             </p>
           </div>
         ) : (

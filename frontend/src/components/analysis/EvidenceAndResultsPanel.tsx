@@ -46,55 +46,73 @@ export const EvidenceAndResultsPanel: React.FC<EvidenceAndResultsPanelProps> = (
     (e) => !opticalEvidence.includes(e) && !sarEvidence.includes(e)
   );
 
+  const confidenceScore = confidence?.final_score ? Math.round(confidence.final_score * 100) : null;
+
+  // Canonical 8-step pipeline timeline
+  const pipelineStages = [
+    { label: 'Input Validation', key: 'validation' },
+    { label: 'Configuration Detection', key: 'config' },
+    { label: 'Intent Detection', key: 'intent' },
+    { label: 'Specialist Selection', key: 'routing' },
+    { label: 'Model Execution', key: 'execution' },
+    { label: 'Evidence Synthesis', key: 'synthesis' },
+    { label: 'Confidence Calculation', key: 'confidence' },
+    { label: 'Result Ready', key: 'ready' },
+  ];
+
   return (
     <aside className="evidence-results-panel flex flex-col gap-4 w-full">
       {/* Top Header */}
       <div className="flex items-center justify-between px-1">
-        <h3 className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+        <h3 className="font-mono text-xs font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
           <span className="text-cyan-400">📊</span>
-          <span>Evidence & AI Results</span>
+          <span>AI RESULTS & EVIDENCE</span>
         </h3>
-        {result && (
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded font-semibold">
-            ● Ready
+        {result ? (
+          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/70 border border-emerald-700/50 px-2 py-0.5 rounded font-bold shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+            ● READY
+          </span>
+        ) : (
+          <span className="text-[10px] font-mono text-slate-500 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">
+            ● STANDBY
           </span>
         )}
       </div>
 
       {/* 1. Confidence & Specialist Card */}
-      {result && confidence && (
-        <div className="card p-3.5 bg-[#0a101d] rounded-xl border border-slate-800 shadow-sm flex flex-col gap-2.5">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
-              Confidence Score
+      <div className="card p-4 bg-[#0a101d] rounded-xl border border-slate-800 shadow-sm flex flex-col gap-3">
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+            CONFIDENCE SCORE
+          </span>
+          {confidence && <ConfidenceBadge confidence={confidence} />}
+        </div>
+
+        {/* Big Arc / Gauge Display */}
+        <div className="flex items-center gap-4 py-1">
+          <div className="w-16 h-16 rounded-full border-4 border-slate-800 border-t-cyan-400 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(6,182,212,0.2)]">
+            <span className="font-mono text-base font-extrabold text-white">
+              {confidenceScore !== null ? `${confidenceScore}%` : '-- %'}
             </span>
-            <ConfidenceBadge confidence={confidence} />
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-2 border-t border-slate-800/80">
-            <div className="p-2 rounded-lg bg-[#0e1628] border border-slate-800/80">
-              <span className="text-[9px] text-slate-500 block uppercase font-bold">Specialist Model</span>
-              <span className="text-cyan-400 font-semibold text-[11px] truncate block" title={specialistDisplayName}>
-                {specialistDisplayName}
-              </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-bold text-slate-100 truncate">
+              {result ? specialistDisplayName : 'RS Specialist Standby'}
             </div>
-
-            <div className="p-2 rounded-lg bg-[#0e1628] border border-slate-800/80">
-              <span className="text-[9px] text-slate-500 block uppercase font-bold">Model Used</span>
-              <span className="text-slate-300 font-semibold text-[11px] truncate block" title={modelUsed}>
-                {modelUsed}
-              </span>
+            <div className="text-[10.5px] font-mono text-slate-400 mt-0.5 truncate">
+              Model: <span className="text-cyan-400">{result ? modelUsed : 'Deterministic Router'}</span>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* 2. Grounded Answer Card */}
       <div className="card p-4 bg-[#0a101d] rounded-xl border border-slate-800 shadow-sm flex flex-col gap-2.5">
         <div className="flex justify-between items-center">
-          <h4 className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          <h4 className="font-mono text-xs font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
             <span className="text-cyan-400">💡</span>
-            <span>Grounded Answer</span>
+            <span>GROUNDED ANSWER</span>
           </h4>
           {result?.duration_ms && (
             <span className="text-[10px] font-mono text-slate-500">
@@ -115,10 +133,10 @@ export const EvidenceAndResultsPanel: React.FC<EvidenceAndResultsPanelProps> = (
           </div>
         ) : !result ? (
           <div className="p-5 rounded-lg bg-[#070d18] border border-slate-800/80 text-center font-sans text-xs text-slate-400 leading-relaxed">
-            <div className="text-xl mb-1 opacity-30">📡</div>
-            <div className="font-semibold text-slate-300">No analysis yet.</div>
+            <div className="text-2xl mb-1.5 opacity-30">📡</div>
+            <div className="font-bold text-slate-200">No analysis yet</div>
             <div className="text-[11px] text-slate-500 mt-1">
-              Upload imagery, select a configuration, enter a question and click <strong>Analyze</strong>.
+              Upload imagery and run an analysis to see grounded results.
             </div>
           </div>
         ) : (
@@ -148,9 +166,9 @@ export const EvidenceAndResultsPanel: React.FC<EvidenceAndResultsPanelProps> = (
       {/* 3. Evidence Summary Card */}
       <div className="card p-4 bg-[#0a101d] rounded-xl border border-slate-800 shadow-sm flex flex-col gap-2.5">
         <div className="flex justify-between items-center">
-          <h4 className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          <h4 className="font-mono text-xs font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
             <span className="text-cyan-400">🔬</span>
-            <span>Evidence Summary</span>
+            <span>EVIDENCE SUMMARY</span>
           </h4>
           {evidence.length > 0 && (
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950 text-cyan-300 border border-blue-800/60 font-semibold">
@@ -167,8 +185,7 @@ export const EvidenceAndResultsPanel: React.FC<EvidenceAndResultsPanelProps> = (
             </div>
           </div>
         ) : opticalEvidence.length > 0 && sarEvidence.length > 0 ? (
-          <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
-            {/* Optical Observations */}
+          <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider">
                 Optical Observations:
@@ -180,7 +197,6 @@ export const EvidenceAndResultsPanel: React.FC<EvidenceAndResultsPanelProps> = (
               ))}
             </div>
 
-            {/* SAR Radar Observations */}
             <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800/60">
               <span className="text-[10px] font-mono font-bold text-purple-400 uppercase tracking-wider">
                 SAR Observations:
@@ -192,7 +208,6 @@ export const EvidenceAndResultsPanel: React.FC<EvidenceAndResultsPanelProps> = (
               ))}
             </div>
 
-            {/* Joint Interpretation */}
             {otherEvidence.length > 0 && (
               <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800/60">
                 <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
@@ -207,7 +222,7 @@ export const EvidenceAndResultsPanel: React.FC<EvidenceAndResultsPanelProps> = (
             )}
           </div>
         ) : (
-          <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1">
             {evidence.map((item, idx) => {
               const isFocused = activeEvidenceId === item.evidence_id;
 
@@ -258,9 +273,9 @@ export const EvidenceAndResultsPanel: React.FC<EvidenceAndResultsPanelProps> = (
       {/* 4. Execution Trace Timeline */}
       <div className="card p-4 bg-[#0a101d] rounded-xl border border-slate-800 shadow-sm flex flex-col gap-2.5">
         <div className="flex justify-between items-center">
-          <h4 className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          <h4 className="font-mono text-xs font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
             <span className="text-cyan-400">📋</span>
-            <span>Execution Trace</span>
+            <span>EXECUTION TRACE</span>
           </h4>
 
           {traceSteps.length > 0 && onClearTrace && (
@@ -269,61 +284,37 @@ export const EvidenceAndResultsPanel: React.FC<EvidenceAndResultsPanelProps> = (
               onClick={onClearTrace}
               className="text-[10px] font-mono text-slate-500 hover:text-red-400 cursor-pointer"
             >
-              Clear Trace
+              Clear
             </button>
           )}
         </div>
 
-        {traceSteps.length === 0 ? (
-          <div className="p-4 rounded-lg bg-[#070d18] border border-slate-800/80 text-center font-sans text-xs text-slate-400 leading-relaxed">
-            <div className="font-semibold text-slate-300">Execution trace will appear when analysis starts.</div>
-            <div className="text-[11px] text-slate-500 mt-1">
-              Records deterministic validation, routing, and specialist runtime.
-            </div>
-          </div>
-        ) : (
-          <div className="relative pl-3 space-y-2 border-l border-slate-800 font-mono text-xs">
-            {traceSteps.map((step) => {
-              const isSuccess = step.status === 'success';
-              const isFailed = step.status === 'failed';
-              const isRunning = step.status === 'in_progress';
+        {/* 8-Stage Timeline */}
+        <div className="space-y-1.5 font-mono text-xs pt-1">
+          {pipelineStages.map((stage, idx) => {
+            const hasRun = Boolean(result);
+            const isRunning = isLoading && idx <= 4;
+            const isCompleted = hasRun;
 
-              return (
-                <div key={step.step_id || step.step_index} className="relative flex items-start gap-2">
-                  <div
-                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 -ml-[19px] ${
-                      isSuccess
-                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-700/60'
-                        : isRunning
-                        ? 'bg-blue-900 text-cyan-300 border-cyan-400 animate-pulse'
-                        : isFailed
-                        ? 'bg-red-950 text-red-400 border border-red-700'
-                        : 'bg-slate-900 text-slate-600 border-slate-800'
-                    }`}
-                  >
-                    {isSuccess ? '✓' : isFailed ? '✕' : '●'}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center gap-1">
-                      <span className="font-semibold text-slate-200 text-[11px] capitalize">
-                        {step.action.replace(/_/g, ' ')}
-                      </span>
-                      {step.duration_ms !== null && (
-                        <span className="text-[10px] text-slate-500">{step.duration_ms} ms</span>
-                      )}
-                    </div>
-                    {step.output_summary && (
-                      <span className="text-[10px] text-slate-400 block truncate font-sans">
-                        {step.output_summary}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+            return (
+              <div
+                key={idx}
+                className={`flex items-center gap-2 py-0.5 transition-colors ${
+                  isCompleted
+                    ? 'text-emerald-400 font-semibold'
+                    : isRunning
+                    ? 'text-cyan-300 font-bold animate-pulse'
+                    : 'text-slate-600'
+                }`}
+              >
+                <span className="w-3.5 text-center text-[11px]">
+                  {isCompleted ? '✓' : isRunning ? '●' : '○'}
+                </span>
+                <span className="text-[11px] capitalize">{stage.label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </aside>
   );

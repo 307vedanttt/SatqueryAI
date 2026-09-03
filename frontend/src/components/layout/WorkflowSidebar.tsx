@@ -37,21 +37,21 @@ export const WorkflowSidebar: React.FC<WorkflowSidebarProps> = ({
     {
       num: '02',
       title: 'Select Configuration',
-      desc: 'Choose analysis configuration',
+      desc: 'Choose analysis mode',
       isCompleted: hasFiles,
       isActive: currentStep === 2,
     },
     {
       num: '03',
       title: 'Ask Question',
-      desc: 'Enter natural language query',
+      desc: 'Enter natural-language query',
       isCompleted: Boolean(hasQuery && hasFiles),
       isActive: currentStep === 3,
     },
     {
       num: '04',
       title: 'Run Specialist',
-      desc: 'AI specialist executes analysis',
+      desc: 'Execute AI analysis',
       isCompleted: Boolean(result),
       isActive: isAnalyzing || currentStep === 4,
       isLoading: isAnalyzing,
@@ -59,7 +59,7 @@ export const WorkflowSidebar: React.FC<WorkflowSidebarProps> = ({
     {
       num: '05',
       title: 'Evidence Result',
-      desc: 'Review evidence and confidence',
+      desc: 'Review grounded results',
       isCompleted: Boolean(result),
       isActive: currentStep === 5,
     },
@@ -70,15 +70,15 @@ export const WorkflowSidebar: React.FC<WorkflowSidebarProps> = ({
       <div>
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-800/80">
           <span className="text-cyan-400 text-sm">🧭</span>
-          <h3 className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider">
-            Analysis Workflow
+          <h3 className="font-mono text-xs font-extrabold text-slate-100 uppercase tracking-wider">
+            ANALYSIS WORKFLOW
           </h3>
         </div>
 
         {/* Stepper Timeline */}
         <div className="relative flex flex-col gap-6 pl-1">
           {/* Vertical Connecting Guide Line */}
-          <div className="absolute left-[17px] top-4 bottom-6 w-[2px] bg-slate-800 -z-0" />
+          <div className="absolute left-[17px] top-4 bottom-6 w-[2px] bg-slate-800/80 -z-0" />
 
           {steps.map((s, idx) => {
             return (
@@ -87,11 +87,11 @@ export const WorkflowSidebar: React.FC<WorkflowSidebarProps> = ({
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-mono font-bold shrink-0 transition-all border ${
                     s.isCompleted
-                      ? 'bg-emerald-950 text-emerald-400 border-emerald-600/60 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
+                      ? 'bg-emerald-950 text-emerald-400 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]'
                       : s.isLoading
-                      ? 'bg-blue-900 text-cyan-300 border-cyan-400 animate-pulse'
+                      ? 'bg-blue-900 text-cyan-300 border-cyan-400 animate-pulse shadow-[0_0_12px_#22d3ee]'
                       : s.isActive
-                      ? 'bg-blue-600 text-white border-blue-400 shadow-sm shadow-blue-500/30'
+                      ? 'bg-blue-600 text-white border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
                       : 'bg-slate-900 text-slate-500 border-slate-800'
                   }`}
                 >
@@ -101,17 +101,17 @@ export const WorkflowSidebar: React.FC<WorkflowSidebarProps> = ({
                 {/* Step Details */}
                 <div className="flex-1 min-w-0 pt-0.5">
                   <div
-                    className={`text-xs font-semibold tracking-tight transition-colors ${
+                    className={`text-xs font-bold tracking-tight transition-colors ${
                       s.isActive
-                        ? 'text-white'
+                        ? 'text-cyan-300'
                         : s.isCompleted
-                        ? 'text-slate-200'
+                        ? 'text-slate-100'
                         : 'text-slate-400'
                     }`}
                   >
                     {s.title}
                   </div>
-                  <div className="text-[10px] text-slate-400 font-sans leading-relaxed mt-0.5">
+                  <div className="text-[10.5px] text-slate-400 font-sans leading-relaxed mt-0.5">
                     {s.desc}
                   </div>
                 </div>
@@ -122,13 +122,13 @@ export const WorkflowSidebar: React.FC<WorkflowSidebarProps> = ({
       </div>
 
       {/* Tip Card at Bottom */}
-      <div className="tip-card mt-6 p-3 rounded-lg bg-[#0e1628] border border-slate-800/80 text-[11px] font-sans text-slate-300">
-        <div className="flex items-center gap-1.5 font-bold text-cyan-400 mb-1 font-mono text-[10px] uppercase">
+      <div className="tip-card mt-6 p-3.5 rounded-xl bg-[#0c1424] border border-cyan-500/20 text-[11px] font-sans text-slate-300 shadow-sm">
+        <div className="flex items-center gap-1.5 font-bold text-cyan-400 mb-1 font-mono text-[10px] uppercase tracking-wide">
           <span>💡</span>
-          <span>Analysis Tip</span>
+          <span>MISSION TIP</span>
         </div>
         <p className="text-slate-400 text-[10.5px] leading-relaxed">
-          Use high-resolution imagery (10m or finer GSD) for more accurate feature grounding and reliable change detection.
+          Use high-resolution imagery for more accurate analysis and better results.
         </p>
       </div>
     </aside>

@@ -64,9 +64,9 @@ export const QuerySection: React.FC<QuerySectionProps> = ({
       {/* Header & Subtitle */}
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          <h3 className="font-mono text-xs font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
             <span className="text-cyan-400">💬</span>
-            <span>Ask Question</span>
+            <span>ASK QUESTION</span>
           </h3>
           <p className="text-[11px] text-slate-400 font-sans mt-0.5">
             Ask a natural-language question about the imagery.
@@ -118,10 +118,8 @@ export const QuerySection: React.FC<QuerySectionProps> = ({
               type="button"
               onClick={onSubmit}
               disabled={!canAnalyze || isAnalyzing}
-              className={`px-4 py-2 rounded-lg font-mono font-bold text-xs tracking-wide flex items-center gap-2 transition-all ${
-                canAnalyze && !isAnalyzing
-                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-md shadow-blue-600/30 cursor-pointer active:scale-[0.98]'
-                  : 'bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700/50'
+              className={`btn-cta px-5 py-2.5 rounded-lg font-mono font-bold text-xs tracking-wider uppercase flex items-center gap-2 ${
+                !canAnalyze || isAnalyzing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
               }`}
             >
               {isAnalyzing ? (
