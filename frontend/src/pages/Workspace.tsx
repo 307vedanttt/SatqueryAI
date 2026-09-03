@@ -270,7 +270,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
       </div>
 
       {/* Main 3-Column Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_390px] gap-4 items-start">
+      <div className="workspace-3col grid grid-cols-1 lg:grid-cols-[240px_1fr_390px] gap-4 items-start">
         {/* Column 1: Left Workflow Sidebar (240px) */}
         <div className="hidden lg:block">
           <WorkflowSidebar
