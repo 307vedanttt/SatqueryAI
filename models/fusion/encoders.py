@@ -1,22 +1,28 @@
 """
-SatQuery AI — Independent Optical & SAR Encoders (Person D - Part 2)
+SatQuery AI — Independent Optical & SAR Feature Encoders (Person D - Part 2)
 
-Maintains SEPARATE encoder weights for optical (reflectance) vs SAR (backscatter).
+Maintains SEPARATE encoder weights for optical (reflectance) vs SAR (backscatter intensity).
+Optical and SAR imagery measure fundamentally different physical properties, so
+they use independent weights to prevent domain interference.
 """
 
+import logging
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
 from PIL import Image
 
+logger = logging.getLogger("satquery.models.fusion.encoders")
+
 
 class OpticalEncoder(nn.Module):
-    """Encoder for optical imagery (3-band RGB / multispectral reflectance)."""
+    """Encoder for optical imagery (RGB / multispectral reflectance)."""
 
     def __init__(self):
         super().__init__()
         import torchvision.models as models
         resnet = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        # Remove average pooling and final FC layer -> Output: [B, 512, H/32, W/32]
         self.backbone = nn.Sequential(*list(resnet.children())[:-2])
         self.transform = T.Compose([
             T.Resize((224, 224)),
@@ -25,6 +31,7 @@ class OpticalEncoder(nn.Module):
         ])
 
     def preprocess(self, pil_img: Image.Image) -> torch.Tensor:
+        """Convert PIL Image to preprocessed 4D tensor [1, 3, 224, 224]."""
         return self.transform(pil_img.convert("RGB")).unsqueeze(0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -33,14 +40,14 @@ class OpticalEncoder(nn.Module):
 
 class SAREncoder(nn.Module):
     """
-    Encoder for SAR imagery (backscatter intensity).
-    Maintains independent weights from OpticalEncoder.
+    Encoder for SAR radar imagery (backscatter intensity).
+    Maintains INDEPENDENT weights from OpticalEncoder.
     """
 
     def __init__(self):
         super().__init__()
         import torchvision.models as models
-        # Independent ResNet18 instance
+        # Independent ResNet18 instance with separate weights
         resnet = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         self.backbone = nn.Sequential(*list(resnet.children())[:-2])
         self.transform = T.Compose([
@@ -50,7 +57,8 @@ class SAREncoder(nn.Module):
         ])
 
     def preprocess(self, pil_img: Image.Image) -> torch.Tensor:
-        # Simple median despeckling heuristic could be applied here
+        """Convert PIL Image to preprocessed 4D tensor [1, 3, 224, 224]."""
+        # Despeckling preprocessing filter could be inserted here
         return self.transform(pil_img.convert("RGB")).unsqueeze(0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

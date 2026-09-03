@@ -1,17 +1,21 @@
 """
 SatQuery AI — Cross-Attention & Gated Fusion (Person D - Part 2)
 
-Combines optical and SAR features via cross-attention (with learned sigmoid gating fallback).
+Combines optical and SAR features via cross-attention (where optical features query SAR features)
+with a learned sigmoid gating fallback mechanism.
 """
 
+import logging
 import torch
 import torch.nn as nn
+
+logger = logging.getLogger("satquery.models.fusion.fusion")
 
 
 class CrossAttentionFusion(nn.Module):
     """
-    Cross-attention or Gated Fusion module for combining Optical and SAR feature maps.
-    Optical features query SAR features to resolve ambiguities.
+    Cross-attention and Gated Fusion module for combining Optical and SAR feature maps.
+    Optical features query SAR features to resolve structural vs spectral ambiguities.
     """
 
     def __init__(self, embed_dim: int = 512, num_heads: int = 4):
