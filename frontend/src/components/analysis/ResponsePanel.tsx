@@ -12,15 +12,15 @@ interface ResponsePanelProps {
 export const ResponsePanel: React.FC<ResponsePanelProps> = ({ result, isLoading }) => {
   if (isLoading) {
     return (
-      <div className="card p-5 bg-surface rounded-xl border border-glass-border">
+      <div className="card p-5 bg-[#0d1424] rounded-xl border border-slate-800 shadow-sm animate-pulse">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg">⏳</span>
-          <span className="font-semibold text-sm text-text">Synthesizing Answer...</span>
+          <span className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <span className="font-semibold text-sm text-slate-200">Synthesizing Answer from Sensor Evidence...</span>
         </div>
-        <div className="space-y-3">
-          <div className="skeleton h-5 w-3/4 rounded" />
-          <div className="skeleton h-16 w-full rounded" />
-          <div className="skeleton h-8 w-1/2 rounded" />
+        <div className="space-y-2.5">
+          <div className="skeleton h-4 w-3/4 rounded bg-slate-800" />
+          <div className="skeleton h-14 w-full rounded bg-slate-800" />
+          <div className="skeleton h-6 w-1/2 rounded bg-slate-800" />
         </div>
       </div>
     );
@@ -28,11 +28,13 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ result, isLoading 
 
   if (!result) {
     return (
-      <div className="card p-6 bg-surface rounded-xl border border-glass-border text-center">
-        <div className="text-4xl mb-2 opacity-30">📡</div>
-        <div className="text-sm font-semibold text-text">Awaiting Analysis Query</div>
-        <div className="text-xs text-text-3 mt-1 max-w-xs mx-auto">
-          Enter a question above and click "Analyze" to trigger the bounded remote-sensing specialist pipeline.
+      <div className="card p-6 bg-[#0d1424] rounded-xl border border-slate-800 text-center shadow-sm">
+        <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-xl text-slate-500 mx-auto mb-2.5">
+          📡
+        </div>
+        <div className="text-sm font-semibold text-slate-200">Awaiting Analysis Query</div>
+        <div className="text-xs text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed font-sans">
+          Enter a question above and click "Analyze" to execute the bounded specialist pipeline.
         </div>
       </div>
     );
@@ -43,7 +45,7 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ result, isLoading 
 
   return (
     <div className="response-panel flex flex-col gap-3">
-      {/* Orchestration route */}
+      {/* Specialist & Pipeline Route */}
       <RoutingSummary
         intent={intent}
         configuration={input.configuration}
@@ -52,16 +54,16 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ result, isLoading 
 
       {/* Answer Block */}
       <div
-        className={`card p-4 rounded-xl border ${
+        className={`card p-4.5 rounded-xl border transition-all ${
           isRefused
-            ? 'border-amber-500/40 bg-amber-950/15'
-            : 'border-glass-border bg-surface shadow-xl'
+            ? 'border-amber-500/40 bg-[#1f170b] shadow-sm'
+            : 'border-slate-800 bg-[#0d1424] shadow-md'
         }`}
       >
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-lg">💬</span>
-            <span className="text-sm font-bold tracking-wide text-text uppercase">
+            <span className="text-base text-cyan-400">💡</span>
+            <span className="text-xs font-bold tracking-wider text-slate-200 uppercase font-mono">
               {isRefused ? 'INSUFFICIENT EVIDENCE' : 'AI ANALYSIS ANSWER'}
             </span>
           </div>
@@ -70,26 +72,26 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ result, isLoading 
         </div>
 
         {/* Answer Text */}
-        <div className="text-xs sm:text-sm text-text-2 leading-relaxed space-y-2 whitespace-pre-line">
+        <div className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-line font-sans">
           {answer.text}
         </div>
 
-        {/* Refusal / Fail-Safe Notice */}
+        {/* Refusal Notice */}
         {isRefused && (
-          <div className="mt-3 p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-xs text-amber-200">
+          <div className="mt-3 p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-xs text-amber-200 font-sans">
             <strong>Fail-safe Notice:</strong>{' '}
             {answer.refusal_reason ||
-              'I cannot reliably answer this query with high confidence from the available imagery. Try asking a question that can be directly supported by the provided sensor data.'}
+              'Cannot reliably answer this query with high confidence from the available imagery. Try asking a question directly observable in the sensor data.'}
           </div>
         )}
 
-        {/* Disagreement Notice */}
+        {/* Sensor Disagreement */}
         <DisagreementBanner disagreement={disagreement} />
 
         {/* Confidence Explanation */}
         {confidence?.explanation && (
-          <div className="mt-3 pt-3 border-t border-glass-border/40 flex items-start gap-2 text-[11px] text-text-3 font-mono">
-            <span className="text-accent">ℹ</span>
+          <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-start gap-2 text-[11px] text-slate-400 font-mono">
+            <span className="text-cyan-400 font-bold">ℹ</span>
             <span>{confidence.explanation}</span>
           </div>
         )}

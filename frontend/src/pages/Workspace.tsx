@@ -181,44 +181,44 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
   return (
     <div className="workspace-page flex flex-col gap-5">
       {/* Top Demo Quick-Bar */}
-      <div className="demo-bar flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-surface/80 border border-glass-border">
-        <div className="flex items-center gap-2 text-xs font-mono">
-          <span className="text-accent">🚀</span>
-          <span className="text-text-2 font-bold uppercase tracking-wider text-[10px]">
-            DEMO PRESETS:
+      <div className="demo-bar flex flex-wrap items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#0c1322] border border-slate-800/80 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+          <span className="text-cyan-400">⚡</span>
+          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+            QUICK SCENARIOS:
           </span>
           <button
             type="button"
-            className="px-2.5 py-1 rounded bg-surface-2 hover:bg-blue-900/40 border border-glass-border text-text-2 hover:text-white transition-colors cursor-pointer"
+            className="px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('vqa')}
           >
             1. Single VQA
           </button>
           <button
             type="button"
-            className="px-2.5 py-1 rounded bg-surface-2 hover:bg-cyan-900/40 border border-glass-border text-text-2 hover:text-white transition-colors cursor-pointer"
+            className="px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('grounding')}
           >
             2. Grounding
           </button>
           <button
             type="button"
-            className="px-2.5 py-1 rounded bg-surface-2 hover:bg-purple-900/40 border border-glass-border text-text-2 hover:text-white transition-colors cursor-pointer"
+            className="px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('optical-sar')}
           >
             3. Optical + SAR
           </button>
           <button
             type="button"
-            className="px-2.5 py-1 rounded bg-surface-2 hover:bg-emerald-900/40 border border-glass-border text-text-2 hover:text-white transition-colors cursor-pointer"
+            className="px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('change')}
           >
             4. Bi-Temporal Change
           </button>
         </div>
 
-        <div className="text-[11px] font-mono text-text-3 hidden md:block">
-          Select preset or upload imagery below to initiate analysis.
+        <div className="text-[11px] font-mono text-slate-500 hidden md:block">
+          Select scenario or drag imagery below to initiate analysis.
         </div>
       </div>
 

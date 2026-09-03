@@ -33,31 +33,35 @@ export const QuerySection: React.FC<QuerySectionProps> = ({
   };
 
   return (
-    <div className="query-section card p-4 bg-surface rounded-xl border border-glass-border shadow-lg">
-      <div className="flex justify-between items-center mb-2">
-        <label htmlFor="query-input" className="text-xs font-semibold text-text flex items-center gap-1.5">
-          <span>🔍</span>
-          <span>NATURAL LANGUAGE QUERY</span>
+    <div className="query-section card p-4 bg-[#0d1424] rounded-xl border border-slate-800 shadow-sm flex flex-col gap-3">
+      <div className="flex justify-between items-center">
+        <label htmlFor="query-input" className="text-xs font-bold text-slate-200 flex items-center gap-2 tracking-wide uppercase font-mono">
+          <span className="text-cyan-400">⚡</span>
+          <span>Natural Language Query</span>
         </label>
-        <span className="text-[10px] font-mono text-text-3">Press Enter to run</span>
+        <span className="text-[10px] font-mono text-slate-500">Press ↵ Enter to run</span>
       </div>
 
-      <div className="relative">
+      <div className="relative flex flex-col gap-2.5">
         <textarea
           id="query-input"
           ref={textareaRef}
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question about the imagery (e.g., 'What changed between these images?' or 'Where are the buildings?')..."
+          placeholder="Ask a question about the imagery (e.g., 'What changed between these dates?' or 'Where are the buildings?')..."
           rows={3}
           disabled={isAnalyzing}
-          className="w-full bg-surface-2 text-text text-xs p-3 rounded-lg border border-glass-border focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none transition-all placeholder:text-text-3"
+          className="w-full bg-[#080d18] text-slate-100 text-xs p-3 rounded-lg border border-slate-800 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 resize-none transition-all placeholder:text-slate-500 leading-relaxed font-sans"
         />
 
-        <div className="flex justify-between items-center mt-2">
-          <span className="text-[11px] text-text-3 font-mono">
-            {canAnalyze ? '✓ Ready for analysis' : 'Upload imagery to start'}
+        <div className="flex justify-between items-center">
+          <span className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5">
+            {canAnalyze ? (
+              <span className="text-emerald-400 font-semibold">● Ready for analysis</span>
+            ) : (
+              <span className="text-slate-500">Upload imagery to enable query</span>
+            )}
           </span>
 
           <div className="flex items-center gap-2">
@@ -66,7 +70,7 @@ export const QuerySection: React.FC<QuerySectionProps> = ({
                 type="button"
                 onClick={onClear}
                 disabled={isAnalyzing}
-                className="px-2.5 py-1.5 rounded-lg font-mono text-xs text-text-3 hover:text-text bg-surface-2 hover:bg-surface-3 border border-glass-border transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-lg font-mono text-xs text-slate-400 hover:text-slate-100 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 transition-colors cursor-pointer"
                 title="Clear query"
               >
                 Clear
@@ -77,10 +81,10 @@ export const QuerySection: React.FC<QuerySectionProps> = ({
               type="button"
               onClick={onSubmit}
               disabled={!canAnalyze || isAnalyzing}
-              className={`px-4 py-2 rounded-lg font-mono font-bold text-xs uppercase tracking-wide flex items-center gap-2 transition-all ${
+              className={`px-4 py-1.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wide flex items-center gap-2 transition-all ${
                 canAnalyze && !isAnalyzing
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 cursor-pointer'
-                  : 'bg-surface-2 text-text-3 cursor-not-allowed border border-glass-border/40'
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 cursor-pointer'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/40'
               }`}
             >
               {isAnalyzing ? (
@@ -99,15 +103,17 @@ export const QuerySection: React.FC<QuerySectionProps> = ({
         </div>
       </div>
 
-      {/* Suggested Questions based on configuration */}
-      <SuggestedQuestions
-        configuration={configuration}
-        onSelectQuestion={(q) => {
-          onQueryChange(q);
-          textareaRef.current?.focus();
-        }}
-        disabled={isAnalyzing}
-      />
+      {/* Suggested Questions */}
+      <div className="pt-2 border-t border-slate-800/80">
+        <SuggestedQuestions
+          configuration={configuration}
+          onSelectQuestion={(q) => {
+            onQueryChange(q);
+            textareaRef.current?.focus();
+          }}
+          disabled={isAnalyzing}
+        />
+      </div>
     </div>
   );
 };
