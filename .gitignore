@@ -1,0 +1,92 @@
+# ============================================================
+# SatQuery AI — .gitignore
+# ============================================================
+
+# --- Environment & Secrets ---
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.secret
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+pip-wheel-metadata/
+.mypy_cache/
+.dmypy.json
+.pyre/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+nosetests.xml
+junit*.xml
+
+# --- Node / Frontend ---
+node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/coverage/
+*.tsbuildinfo
+
+# --- Database ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Uploads / Generated Data ---
+data/uploads/*
+data/results/*
+data/cache/*
+!data/uploads/.gitkeep
+!data/results/.gitkeep
+!data/cache/.gitkeep
+
+# --- Model Weights ---
+models/weights/
+models/checkpoints/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.gguf
+*.onnx
+
+# --- Logs ---
+logs/
+*.log
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Docker ---
+.docker/
+
+# --- Misc ---
+*.tmp
+*.bak
+.cache/

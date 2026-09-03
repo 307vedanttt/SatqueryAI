@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: satquery-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./backend:/app
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DEMO_MODE=${DEMO_MODE:-true}
+      - DATABASE_URL=sqlite:///./data/satquery.db
+      - STORAGE_PATH=/app/data
+      - UPLOAD_DIR=/app/data/uploads
+      - RESULTS_DIR=/app/data/results
+      - CACHE_DIR=/app/data/cache
+      - LLM_PROVIDER=${LLM_PROVIDER:-mock}
+      - VISION_PROVIDER=${VISION_PROVIDER:-mock}
+      - FRONTEND_URL=http://localhost:5173
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: satquery-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  satquery_data:
