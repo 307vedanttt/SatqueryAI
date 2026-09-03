@@ -217,6 +217,58 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
         </div>
       </div>
 
+      {/* Mobile / Tablet Horizontal Workflow Stepper (visible on < lg screens) */}
+      <div className="lg:hidden flex items-center justify-between p-2.5 rounded-xl bg-[#0a101d] border border-slate-800 text-[10.5px] font-mono text-slate-400 overflow-x-auto gap-2">
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+            files.length > 0 ? 'bg-emerald-950 text-emerald-400 border border-emerald-600/60' : 'bg-blue-600 text-white'
+          }`}>
+            {files.length > 0 ? '✓' : '1'}
+          </span>
+          <span className={files.length === 0 ? 'text-white font-semibold' : 'text-slate-300'}>Upload</span>
+        </div>
+        <span className="text-slate-700 shrink-0">→</span>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+            files.length > 0 ? 'bg-emerald-950 text-emerald-400 border border-emerald-600/60' : 'bg-slate-900 text-slate-500'
+          }`}>
+            {files.length > 0 ? '✓' : '2'}
+          </span>
+          <span className="text-slate-300">Config</span>
+        </div>
+        <span className="text-slate-700 shrink-0">→</span>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+            query.trim() ? 'bg-emerald-950 text-emerald-400 border border-emerald-600/60' : files.length > 0 ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-500'
+          }`}>
+            {query.trim() ? '✓' : '3'}
+          </span>
+          <span className={files.length > 0 && !query.trim() ? 'text-white font-semibold' : 'text-slate-300'}>Query</span>
+        </div>
+        <span className="text-slate-700 shrink-0">→</span>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+            analysisResult ? 'bg-emerald-950 text-emerald-400 border border-emerald-600/60' : isAnalyzing ? 'bg-blue-600 text-white animate-pulse' : 'bg-slate-900 text-slate-500'
+          }`}>
+            {analysisResult ? '✓' : '4'}
+          </span>
+          <span className={isAnalyzing ? 'text-cyan-300 font-semibold' : 'text-slate-300'}>Run</span>
+        </div>
+        <span className="text-slate-700 shrink-0">→</span>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+            analysisResult ? 'bg-emerald-950 text-emerald-400 border border-emerald-600/60' : 'bg-slate-900 text-slate-500'
+          }`}>
+            {analysisResult ? '✓' : '5'}
+          </span>
+          <span className={analysisResult ? 'text-emerald-300 font-semibold' : 'text-slate-500'}>Result</span>
+        </div>
+      </div>
+
       {/* Main 3-Column Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_390px] gap-4 items-start">
         {/* Column 1: Left Workflow Sidebar (240px) */}
