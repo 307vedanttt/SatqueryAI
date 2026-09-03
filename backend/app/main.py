@@ -56,8 +56,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Ensure database schema is initialized
+    init_db()
+
     # Attach registry to app state so routes can access it
     app.state.registry = SpecialistRegistry()
+    app.state.registry.bootstrap()
 
     # CORS — allow frontend origin
     app.add_middleware(

@@ -4,10 +4,7 @@ import type {
   InputConfiguration,
   UploadedFileInfo,
 } from '../types';
-import { UploadZone } from '../components/upload/UploadZone';
-import { ValidationPanel } from '../components/upload/ValidationPanel';
-import { ConfigurationCard } from '../components/upload/ConfigurationCard';
-import { MetadataCard } from '../components/metadata/MetadataCard';
+import { ModeAwareUploader, type AnalysisMode } from '../components/upload/ModeAwareUploader';
 import { ImageViewer } from '../components/viewer/ImageViewer';
 import { QuerySection } from '../components/analysis/QuerySection';
 import { AnalysisProgress } from '../components/analysis/AnalysisProgress';
@@ -21,6 +18,7 @@ interface WorkspaceProps {
 }
 
 export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
+  const [mode, setMode] = useState<AnalysisMode>('single');
   const [files, setFiles] = useState<File[]>([]);
   const [uploadedInfos, setUploadedInfos] = useState<UploadedFileInfo[]>([]);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
@@ -32,12 +30,18 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedMetaIndex, setSelectedMetaIndex] = useState(0);
   const [activeEvidenceId, setActiveEvidenceId] = useState<string | null>(null);
 
-  // Handle file uploads
+  // Switch analysis modes
+  const handleModeChange = (newMode: AnalysisMode) => {
+    setMode(newMode);
+    // Clear previous results when intentionally switching workflow modes
+    setAnalysisResult(null);
+    setError(null);
+  };
+
+  // Upload handling
   const handleFilesSelected = async (newFiles: File[]) => {
-    // Limit to at most 2 files
     const combinedFiles = [...files, ...newFiles].slice(0, 2);
     setFiles(combinedFiles);
     setError(null);
@@ -56,6 +60,26 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
     }
   };
 
+  const handleReplaceFile = async (slotIndex: number, newFile: File) => {
+    const updatedFiles = [...files];
+    updatedFiles[slotIndex] = newFile;
+    setFiles(updatedFiles);
+    setError(null);
+    setIsUploading(true);
+
+    try {
+      const resp = await uploadFiles(updatedFiles, sessionId);
+      setSessionId(resp.session_id);
+      setUploadId(resp.upload_id);
+      setUploadedInfos(resp.files);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'File update failed.';
+      setError(msg);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleRemoveFile = (index: number) => {
     const updatedFiles = files.filter((_, i) => i !== index);
     const updatedInfos = uploadedInfos.filter((_, i) => i !== index);
@@ -67,28 +91,42 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
     }
   };
 
-  // Demo presets for quick testing of all 4 scenarios
-  const handleLoadDemoPreset = (type: 'vqa' | 'grounding' | 'optical-sar' | 'change') => {
+  const handleClearAll = () => {
+    setFiles([]);
+    setUploadedInfos([]);
+    setUploadId(null);
+    setAnalysisResult(null);
+    setQuery('');
+    setError(null);
+    setActiveEvidenceId(null);
+  };
+
+  // Quick Demo Presets
+  const handleLoadDemoPreset = (presetType: 'vqa' | 'grounding' | 'optical-sar' | 'change') => {
     setError(null);
     setAnalysisResult(null);
 
-    if (type === 'vqa') {
+    if (presetType === 'vqa') {
+      setMode('single');
       const f = new File([''], 'sentinel2_optical_scene.tif', { type: 'image/tiff' });
       setFiles([f]);
       setQuery('What is visible in this image?');
       handleFilesSelected([f]);
-    } else if (type === 'grounding') {
+    } else if (presetType === 'grounding') {
+      setMode('single');
       const f = new File([''], 'bangalore_urban_area.tif', { type: 'image/tiff' });
       setFiles([f]);
       setQuery('Where are the buildings?');
       handleFilesSelected([f]);
-    } else if (type === 'optical-sar') {
+    } else if (presetType === 'optical-sar') {
+      setMode('optical-sar');
       const f1 = new File([''], 'sentinel2_optical.tif', { type: 'image/tiff' });
       const f2 = new File([''], 'sentinel1_sar_vv.tif', { type: 'image/tiff' });
       setFiles([f1, f2]);
       setQuery('What complementary information do these images provide?');
       handleFilesSelected([f1, f2]);
-    } else if (type === 'change') {
+    } else if (presetType === 'change') {
+      setMode('bi-temporal');
       const f1 = new File([''], 'sentinel_t1_2024.tif', { type: 'image/tiff' });
       const f2 = new File([''], 'sentinel_t2_2025.tif', { type: 'image/tiff' });
       setFiles([f1, f2]);
@@ -142,7 +180,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
 
   return (
     <div className="workspace-page flex flex-col gap-5">
-      {/* Workflow Quick-Launch Banner */}
+      {/* Top Demo Quick-Bar */}
       <div className="demo-bar flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-surface/80 border border-glass-border">
         <div className="flex items-center gap-2 text-xs font-mono">
           <span className="text-accent">🚀</span>
@@ -151,85 +189,73 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
           </span>
           <button
             type="button"
-            className="px-2 py-0.5 rounded bg-surface-2 hover:bg-blue-900/40 border border-glass-border text-text-2 hover:text-white transition-colors"
+            className="px-2.5 py-1 rounded bg-surface-2 hover:bg-blue-900/40 border border-glass-border text-text-2 hover:text-white transition-colors cursor-pointer"
             onClick={() => handleLoadDemoPreset('vqa')}
           >
             1. Single VQA
           </button>
           <button
             type="button"
-            className="px-2 py-0.5 rounded bg-surface-2 hover:bg-cyan-900/40 border border-glass-border text-text-2 hover:text-white transition-colors"
+            className="px-2.5 py-1 rounded bg-surface-2 hover:bg-cyan-900/40 border border-glass-border text-text-2 hover:text-white transition-colors cursor-pointer"
             onClick={() => handleLoadDemoPreset('grounding')}
           >
             2. Grounding
           </button>
           <button
             type="button"
-            className="px-2 py-0.5 rounded bg-surface-2 hover:bg-purple-900/40 border border-glass-border text-text-2 hover:text-white transition-colors"
+            className="px-2.5 py-1 rounded bg-surface-2 hover:bg-purple-900/40 border border-glass-border text-text-2 hover:text-white transition-colors cursor-pointer"
             onClick={() => handleLoadDemoPreset('optical-sar')}
           >
             3. Optical + SAR
           </button>
           <button
             type="button"
-            className="px-2 py-0.5 rounded bg-surface-2 hover:bg-emerald-900/40 border border-glass-border text-text-2 hover:text-white transition-colors"
+            className="px-2.5 py-1 rounded bg-surface-2 hover:bg-emerald-900/40 border border-glass-border text-text-2 hover:text-white transition-colors cursor-pointer"
             onClick={() => handleLoadDemoPreset('change')}
           >
             4. Bi-Temporal Change
           </button>
         </div>
 
-        <div className="text-[11px] font-mono text-text-3 hidden lg:block">
-          Click any preset to auto-load sample satellite tiles and queries.
+        <div className="text-[11px] font-mono text-text-3 hidden md:block">
+          Select preset or upload imagery below to initiate analysis.
         </div>
       </div>
 
-      {/* Main 3-Column Analysis Interface */}
+      {/* Main Two-Column Analysis Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Column 1: INPUT (Col 1-3) */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
-          <UploadZone
+        {/* Left Column: IMAGE WORKSPACE (Col 1 to 7) */}
+        <div className="lg:col-span-7 flex flex-col gap-4">
+          <ModeAwareUploader
+            mode={mode}
+            onModeChange={handleModeChange}
             files={files}
             uploadedInfos={uploadedInfos}
             onFilesSelected={handleFilesSelected}
+            onReplaceFile={handleReplaceFile}
             onRemoveFile={handleRemoveFile}
+            onClearAll={handleClearAll}
             isUploading={isUploading}
             error={error}
+            detectedConfiguration={detectedConfig}
           />
 
-          <ConfigurationCard
-            files={uploadedInfos}
-            configuration={detectedConfig}
-          />
-
-          <ValidationPanel
-            files={uploadedInfos}
-            isUploading={isUploading}
-          />
-
-          <MetadataCard
-            files={uploadedInfos}
-            selectedFileIndex={selectedMetaIndex}
-            onSelectFileIndex={setSelectedMetaIndex}
-          />
-        </div>
-
-        {/* Column 2: SATELLITE IMAGE VIEWER (Col 4-8) */}
-        <div className="lg:col-span-5 flex flex-col gap-4">
           <ImageViewer
             files={uploadedInfos}
+            rawFiles={files}
             evidence={analysisResult?.evidence || []}
             activeEvidenceId={activeEvidenceId}
             onClearActiveEvidence={() => setActiveEvidenceId(null)}
           />
         </div>
 
-        {/* Column 3: AI REASONING & ANALYSIS (Col 9-12) */}
-        <div className="lg:col-span-4 flex flex-col gap-4">
+        {/* Right Column: AI ANALYSIS & REASONING PANEL (Col 8 to 12) */}
+        <div className="lg:col-span-5 flex flex-col gap-4">
           <QuerySection
             query={query}
             onQueryChange={setQuery}
             onSubmit={handleRunAnalysis}
+            onClear={() => setQuery('')}
             isAnalyzing={isAnalyzing}
             canAnalyze={uploadedInfos.length > 0 && query.trim().length > 0 && !isUploading}
             configuration={detectedConfig}
@@ -241,21 +267,21 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
             result={analysisResult}
             isLoading={isAnalyzing}
           />
+
+          {/* Supporting Evidence categorized directly below the response */}
+          {analysisResult && (
+            <EvidencePanel
+              evidence={analysisResult.evidence || []}
+              activeEvidenceId={activeEvidenceId}
+              onFocusEvidence={(id) => setActiveEvidenceId(id)}
+            />
+          )}
         </div>
       </div>
 
-      {/* Bottom Section 1: EVIDENCE */}
-      <div className="w-full">
-        <EvidencePanel
-          evidence={analysisResult?.evidence || []}
-          activeEvidenceId={activeEvidenceId}
-          onFocusEvidence={(id) => setActiveEvidenceId(id)}
-        />
-      </div>
-
-      {/* Bottom Section 2: EXECUTION TRACE */}
+      {/* Bottom Section: EXECUTION TRACE (Full Width) */}
       {analysisResult?.execution_trace && analysisResult.execution_trace.length > 0 && (
-        <div className="w-full">
+        <div className="w-full mt-2">
           <ExecutionTrace steps={analysisResult.execution_trace} />
         </div>
       )}

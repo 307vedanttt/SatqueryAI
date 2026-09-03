@@ -105,8 +105,12 @@ def classify_intent(query: str, input_config: InputConfiguration) -> IntentResul
             # No keyword match — use configuration default
             best_intent = config_intent
             best_confidence = 0.70
+        elif best_intent == QueryIntent.SCENE_DESCRIPTION and input_config == InputConfiguration.BI_TEMPORAL:
+            # Generic query on bi-temporal config defaults to change detection
+            best_intent = config_intent
+            best_confidence = 0.75
         elif best_intent != config_intent:
-            # Keyword matched different intent — let keyword win but reduce confidence slightly
+            # Specific keyword matched different intent — let keyword win but reduce confidence slightly
             best_confidence = max(0.60, best_confidence - 0.08)
 
     # Final fallback

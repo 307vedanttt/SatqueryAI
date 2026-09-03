@@ -169,16 +169,6 @@ async def analyze(
         end_time = datetime.now(timezone.utc)
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
 
-        # --- Persist result ---
-        db_request.status = final_status.value
-        db_request.input_configuration = input_config.value
-        db_request.intent = intent_result.type.value
-        db_request.specialist_used = route_plan.specialist
-        db_request.confidence_score = confidence.final_score
-        db_request.completed_at = end_time
-        db_request.duration_ms = duration_ms
-        db.commit()
-
         response = AnalysisResponse(
             request_id=request_id,
             session_id=request.session_id,
@@ -196,6 +186,17 @@ async def analyze(
             created_at=start_time,
             duration_ms=duration_ms,
         )
+
+        # --- Persist result ---
+        db_request.status = final_status.value
+        db_request.input_configuration = input_config.value
+        db_request.intent = intent_result.type.value
+        db_request.specialist_used = route_plan.specialist
+        db_request.confidence_score = confidence.final_score
+        db_request.result_json = response.model_dump(mode="json")
+        db_request.completed_at = end_time
+        db_request.duration_ms = duration_ms
+        db.commit()
 
         logger.info(
             "analysis_complete",
@@ -225,3 +226,39 @@ async def get_analysis(
     if not db_req or not db_req.result_json:
         raise NotFoundError(message=f"Analysis '{request_id}' not found or not yet complete.")
     return AnalysisResponse(**db_req.result_json)
+
+
+@router.get("/history", summary="Get recent analysis history")
+async def get_history_list(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Retrieve recent queries and analysis summaries from database."""
+    records = (
+        db.query(orm.AnalysisRequest)
+        .filter(orm.AnalysisRequest.status == "success")
+        .order_by(orm.AnalysisRequest.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    items = []
+    for r in records:
+        res = r.result_json or {}
+        answer = res.get("answer", {}).get("text", "")
+        conf_label = res.get("confidence", {}).get("label", "moderate")
+        files = res.get("input", {}).get("files", [])
+
+        items.append({
+            "id": r.id,
+            "query": r.query_text,
+            "timestamp": r.created_at.isoformat() if r.created_at else "",
+            "task": r.intent or "ANALYSIS",
+            "confidenceScore": r.confidence_score or 0.8,
+            "confidenceLabel": conf_label,
+            "answerSummary": answer[:180] + "..." if len(answer) > 180 else answer,
+            "files": files,
+            "configuration": r.input_configuration or "SINGLE_OPTICAL",
+        })
+
+    return items
