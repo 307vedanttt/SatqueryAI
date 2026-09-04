@@ -9,6 +9,7 @@ interface ImageViewerProps {
   evidence: Evidence[];
   activeEvidenceId?: string | null;
   onClearActiveEvidence?: () => void;
+  isAnalyzing?: boolean;
 }
 
 export const ImageViewer: React.FC<ImageViewerProps> = ({
@@ -16,6 +17,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   rawFiles = [],
   evidence,
   activeEvidenceId,
+  isAnalyzing = false,
 }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -25,6 +27,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   const [splitPos, setSplitPos] = useState(50);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hoveredBboxId, setHoveredBboxId] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
   const [overlays, setOverlays] = useState<OverlayOptions>({
     evidence: true,
@@ -70,10 +73,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
     setZoom(1);
     setPan({ x: 0, y: 0 });
   };
-  const handleFit = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  };
 
   const toggleFullscreen = () => {
     if (!viewerRef.current) return;
@@ -98,11 +97,16 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setPan({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
-    });
+    if (isDragging) {
+      setPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      });
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+    setMousePos({ x, y });
   };
 
   const handleMouseUp = () => setIsDragging(false);
@@ -112,31 +116,47 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   const changeItems = evidence.filter((ev) => ev.evidence_type === 'temporal_difference' && ev.bbox);
   const sensorItems = evidence.filter((ev) => ev.evidence_type === 'sensor_comparison');
 
-  const imgWidth = files[0]?.metadata?.width || 1920;
-  const imgHeight = files[0]?.metadata?.height || 1080;
+  const mainMeta = files[0]?.metadata;
+  const imgWidth = mainMeta?.width || 1920;
+  const imgHeight = mainMeta?.height || 1080;
+  const crsText = mainMeta?.crs || 'EPSG:4326';
+  const gsdText = mainMeta?.resolution ? `${mainMeta.resolution[0]}m/PX` : '10m/PX';
+  const sensorText = mainMeta?.sensor || (mainMeta?.image_type === 'sar' ? 'Sentinel-1 SAR' : 'Sentinel-2 MSI');
 
   return (
     <div
       ref={viewerRef}
-      className={`imagery-viewer relative bg-[#060a14] rounded-xl border border-slate-800 overflow-hidden flex flex-col shadow-sm ${
-        isFullscreen ? 'h-screen w-screen rounded-none' : 'min-h-[460px] h-[480px]'
+      className={`imagery-viewer relative bg-[#02050c] rounded-xl border border-white/10 overflow-hidden flex flex-col shadow-2xl shadow-black/60 transition-all ${
+        isFullscreen ? 'h-screen w-screen rounded-none' : 'min-h-[480px] h-[500px]'
       }`}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      {/* Viewer Header */}
-      <div className="flex justify-between items-center px-4 py-2.5 bg-[#070d1a]/90 backdrop-blur-md border-b border-slate-800/90 z-20">
+      {/* Top Header Command Bar */}
+      <div className="flex justify-between items-center px-4 py-2.5 bg-slate-950/80 backdrop-blur-xl border-b border-white/10 z-20">
         <div className="flex items-center gap-2.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse" />
-          <h3 className="font-mono text-xs font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
-            <span>IMAGERY VIEWER</span>
-            <span className="text-[10px] text-cyan-400 font-bold bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/40">
-              {isLoaded ? '● READY' : '● STANDBY'}
+          <span className={`w-2.5 h-2.5 rounded-full ${
+            isAnalyzing
+              ? 'bg-cyan-400 shadow-[0_0_10px_#22d3ee] animate-pulse'
+              : isLoaded
+              ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+              : 'bg-slate-600'
+          }`} />
+          <h3 className="font-mono text-xs font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+            <span>GIS INTELLIGENCE WORKSTATION</span>
+            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+              isAnalyzing
+                ? 'bg-cyan-950/80 text-cyan-300 border-cyan-800/60'
+                : isLoaded
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60'
+                : 'bg-slate-900 text-slate-400 border-slate-800'
+            }`}>
+              {isAnalyzing ? '● ANALYZING' : isLoaded ? '● READY' : '● STANDBY'}
             </span>
           </h3>
 
-          {hasTwoImages && (
-            <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-800 text-[11px] font-mono ml-2">
+          {hasTwoImages && isLoaded && !isAnalyzing && (
+            <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-white/10 text-[11px] font-mono ml-2">
               <button
                 type="button"
                 className={`px-2.5 py-0.5 rounded transition-all cursor-pointer ${
@@ -159,11 +179,21 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
           )}
         </div>
 
-        {/* Right Status / Telemetry */}
-        <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-400">
-          <span className="hidden sm:inline">GSD: 10m/PX</span>
-          <span className="text-slate-600">•</span>
-          <span className="text-cyan-400">{files[0]?.metadata?.crs || 'EPSG:4326'}</span>
+        {/* Right Telemetry Information */}
+        <div className="flex items-center gap-2.5 text-[11px] font-mono text-slate-400">
+          {isLoaded && (
+            <>
+              <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-slate-900/80 border border-white/5 text-slate-300">
+                {sensorText}
+              </span>
+              <span className="hidden md:inline-block px-2 py-0.5 rounded bg-slate-900/80 border border-white/5 text-slate-300">
+                GSD: {gsdText}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-cyan-950/50 border border-cyan-800/40 text-cyan-300 font-semibold">
+                {crsText}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -173,76 +203,120 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
       >
-        {/* Floating Map Controls on Left */}
-        <div className="absolute top-3 left-3 z-30 flex flex-col gap-1 bg-slate-900/80 backdrop-blur-md p-1 rounded-lg border border-slate-800 shadow-lg">
-          <button
-            type="button"
-            className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded font-mono text-sm cursor-pointer transition-colors"
-            onClick={handleZoomIn}
-            title="Zoom In"
-            aria-label="Zoom In"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded font-mono text-sm cursor-pointer transition-colors"
-            onClick={handleZoomOut}
-            title="Zoom Out"
-            aria-label="Zoom Out"
-          >
-            -
-          </button>
-          <div className="w-full h-[1px] bg-slate-800 my-0.5" />
-          <button
-            type="button"
-            className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded font-mono text-xs cursor-pointer transition-colors"
-            onClick={handleFit}
-            title="Fit to Screen"
-            aria-label="Fit to Screen"
-          >
-            ⛶
-          </button>
-          <button
-            type="button"
-            className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded font-mono text-[10px] cursor-pointer transition-colors"
-            onClick={handleReset}
-            title="Reset Pan/Zoom (1:1)"
-          >
-            1:1
-          </button>
-          <button
-            type="button"
-            className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded font-mono text-xs cursor-pointer transition-colors"
-            onClick={toggleFullscreen}
-            title="Fullscreen"
-            aria-label="Fullscreen"
-          >
-            🗖
-          </button>
-        </div>
+        {/* Fine Reticle Grid Texture Overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.03)_0%,transparent_75%)] pointer-events-none z-0" />
+
+        {/* Floating Liquid-Glass Control Cluster (Left) */}
+        {isLoaded && (
+          <div className="absolute top-3 left-3 z-30 flex flex-col gap-1.5 bg-slate-950/85 backdrop-blur-xl p-1.5 rounded-xl border border-white/10 shadow-2xl shadow-black/80">
+            <button
+              type="button"
+              className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 rounded-lg font-mono text-sm cursor-pointer transition-all"
+              onClick={handleZoomIn}
+              title="Zoom In (+)"
+              aria-label="Zoom In"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 rounded-lg font-mono text-sm cursor-pointer transition-all"
+              onClick={handleZoomOut}
+              title="Zoom Out (-)"
+              aria-label="Zoom Out"
+            >
+              -
+            </button>
+            <div className="w-full h-[1px] bg-white/10 my-0.5" />
+            <button
+              type="button"
+              className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 rounded-lg font-mono text-[10px] font-bold cursor-pointer transition-all"
+              onClick={handleReset}
+              title="Reset Pan & Zoom (1:1)"
+            >
+              1:1
+            </button>
+            <button
+              type="button"
+              className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 rounded-lg font-mono text-xs cursor-pointer transition-all"
+              onClick={toggleFullscreen}
+              title="Toggle Fullscreen"
+              aria-label="Fullscreen"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {/* Reticle Corner Brackets */}
-        <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400/80 pointer-events-none z-20" />
-        <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400/80 pointer-events-none z-20" />
-        <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400/80 pointer-events-none z-20" />
-        <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400/80 pointer-events-none z-20" />
+        <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-cyan-500/60 pointer-events-none z-20" />
+        <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-cyan-500/60 pointer-events-none z-20" />
+        <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-cyan-500/60 pointer-events-none z-20" />
+        <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-cyan-500/60 pointer-events-none z-20" />
 
-        {/* Empty State when no imagery is loaded */}
-        {!isLoaded ? (
+        {/* --- STATE 1: EMPTY --- */}
+        {!isLoaded && !isAnalyzing && (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
-            <div className="w-16 h-16 rounded-2xl bg-[#0a1224] border border-cyan-500/30 flex items-center justify-center text-3xl text-cyan-400 mb-3 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-              🛰️
+            <div className="w-16 h-16 rounded-2xl bg-slate-900/90 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4 shadow-xl shadow-cyan-950/40">
+              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M13 2L3 12" />
+                <path d="M7 2L2 7" />
+                <path d="M22 17L17 22" />
+                <path d="M22 13L13 22" />
+                <path d="M8 8l8 8" />
+                <circle cx="12" cy="12" r="2" fill="currentColor" className="text-cyan-400" />
+                <path d="M19 5a7 7 0 0 1 0 10" />
+              </svg>
             </div>
-            <div className="text-base font-extrabold text-slate-100 uppercase tracking-wide">
+            <h4 className="text-base font-extrabold text-white font-mono uppercase tracking-wide">
               Satellite imagery required
-            </div>
+            </h4>
             <p className="text-xs text-slate-400 max-w-sm mt-1.5 leading-relaxed font-sans">
-              Upload GeoTIFF or supported imagery to begin analysis, or select a quick scenario.
+              Upload imagery to begin analysis.
             </p>
           </div>
-        ) : (
-          /* Imagery Canvas Transform Area */
+        )}
+
+        {/* --- STATE 2: ANALYZING --- */}
+        {isAnalyzing && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-20 bg-slate-950/85 backdrop-blur-md">
+            {/* Radar Scan Sweeper Line Animation */}
+            <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/10 via-cyan-400/5 to-transparent animate-pulse pointer-events-none" />
+
+            {/* Processing Radar Loader */}
+            <div className="relative w-20 h-20 mb-4 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-2 border-cyan-500/30 animate-ping" />
+              <div className="absolute inset-2 rounded-full border-2 border-cyan-400/60 animate-spin border-t-transparent" />
+              <div className="w-10 h-10 rounded-full bg-cyan-950/90 border border-cyan-400 flex items-center justify-center text-cyan-300 shadow-lg shadow-cyan-500/30">
+                <svg className="w-5 h-5 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9" />
+                  <circle cx="12" cy="12" r="3" />
+                  <line x1="12" y1="3" x2="12" y2="21" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="font-mono text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span>BOUNDED EXECUTION GRAPH RUNNING</span>
+            </div>
+
+            <p className="text-xs font-sans text-slate-200 font-semibold mb-2">
+              Executing Specialist Tool Pipeline & Synthesizing Multimodal Evidence...
+            </p>
+
+            <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-slate-900/90 border border-white/10 text-[11px] font-mono text-slate-400">
+              <span className="text-cyan-400">STATUS:</span>
+              <span className="text-slate-200 font-semibold">{files[0]?.metadata?.sensor || 'Optical/SAR Specialist'} Active</span>
+            </div>
+          </div>
+        )}
+
+        {/* --- STATE 3: LOADED --- */}
+        {isLoaded && (
           <div
             className="canvas-transform absolute inset-0 transition-transform duration-75 flex items-center justify-center p-4"
             style={{
@@ -251,18 +325,17 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
             }}
           >
             {viewMode === 'before-after' && hasTwoImages ? (
-              /* Before / After Split Slider View */
-              <div className="relative w-[580px] h-[340px] rounded-xl overflow-hidden border border-slate-700/80 shadow-2xl bg-[#0b1220]">
+              /* Split Slider View */
+              <div className="relative w-[580px] h-[340px] rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-[#080f1e]">
                 {/* Image 1 (T1) */}
                 <div className="absolute inset-0 bg-[#070e1c] flex flex-col items-center justify-center">
                   {preview1 ? (
-                    <img src={preview1} alt="T1 Before" className="w-full h-full object-cover" />
+                    <img src={preview1} alt="T1 Baseline" className="w-full h-full object-cover" />
                   ) : (
-                    <>
-                      <div className="text-3xl mb-1 opacity-40">🛰️</div>
-                      <span className="font-mono text-xs text-slate-200 font-bold">T1 (BEFORE)</span>
+                    <div className="flex flex-col items-center opacity-60">
+                      <span className="font-mono text-xs text-slate-200 font-bold">T1 — BASELINE</span>
                       <span className="font-mono text-[10px] text-slate-400">{files[0].original_filename}</span>
-                    </>
+                    </div>
                   )}
                 </div>
 
@@ -272,13 +345,12 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
                   style={{ clipPath: `polygon(${splitPos}% 0, 100% 0, 100% 100%, ${splitPos}% 100%)` }}
                 >
                   {preview2 ? (
-                    <img src={preview2} alt="T2 After" className="w-full h-full object-cover" />
+                    <img src={preview2} alt="T2 Target" className="w-full h-full object-cover" />
                   ) : (
-                    <>
-                      <div className="text-3xl mb-1 opacity-40">🛰️</div>
-                      <span className="font-mono text-xs text-cyan-300 font-bold">T2 (AFTER)</span>
+                    <div className="flex flex-col items-center opacity-60">
+                      <span className="font-mono text-xs text-cyan-300 font-bold">T2 — TARGET</span>
                       <span className="font-mono text-[10px] text-slate-400">{files[1].original_filename}</span>
-                    </>
+                    </div>
                   )}
                 </div>
 
@@ -299,19 +371,19 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
                   max="100"
                   value={splitPos}
                   onChange={(e) => setSplitPos(Number(e.target.value))}
-                  className="absolute bottom-3 left-4 right-4 z-20 opacity-60 hover:opacity-100 transition-opacity cursor-ew-resize"
+                  className="absolute bottom-3 left-4 right-4 z-20 opacity-70 hover:opacity-100 transition-opacity cursor-ew-resize"
                 />
               </div>
             ) : viewMode === 'side-by-side' && hasTwoImages ? (
               /* Side-by-Side Dual View */
               <div className="grid grid-cols-2 gap-3.5 w-[720px] max-w-full">
                 {/* Slot 1 */}
-                <div className="relative h-[330px] rounded-xl border border-slate-700/80 overflow-hidden bg-[#091120] flex flex-col justify-between p-3.5 shadow-xl">
+                <div className="relative h-[330px] rounded-xl border border-white/10 overflow-hidden bg-[#080f1e] flex flex-col justify-between p-3.5 shadow-xl">
                   <div className="flex justify-between items-center text-xs font-mono z-10">
                     <span className="px-2 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60 font-bold text-[10px]">
-                      {files[0].metadata?.image_type === 'sar' ? 'SAR RADAR' : 'OPTICAL (T1)'}
+                      {files[0].metadata?.sensor || 'OPTICAL SENSOR'}
                     </span>
-                    <span className="text-slate-400 text-[10px]">{files[0].metadata?.acquisition_date || '2024'}</span>
+                    <span className="text-slate-400 text-[10px]">{files[0].metadata?.acquisition_date || 'T1'}</span>
                   </div>
 
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -319,26 +391,24 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
                       <img src={preview1} alt="Slot 1" className="w-full h-full object-cover" />
                     ) : (
                       <div className="flex flex-col items-center opacity-60">
-                        <div className="text-4xl mb-1">🛰️</div>
-                        <span className="font-mono text-xs text-slate-300 truncate max-w-[200px]">{files[0].original_filename}</span>
-                        <span className="font-mono text-[10px] text-slate-500">{files[0].metadata?.sensor || 'Sentinel-2'}</span>
+                        <span className="font-mono text-xs text-slate-200 font-bold truncate max-w-[200px]">{files[0].original_filename}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="text-[10px] font-mono text-slate-300 flex justify-between z-10 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md border border-slate-800">
+                  <div className="text-[10px] font-mono text-slate-300 flex justify-between z-10 bg-slate-950/80 backdrop-blur-md px-2 py-1 rounded-md border border-white/10">
                     <span>{files[0].metadata?.crs || 'EPSG:4326'}</span>
-                    <span>10m res</span>
+                    <span>{files[0].metadata?.resolution ? `${files[0].metadata.resolution[0]}m` : '10m GSD'}</span>
                   </div>
                 </div>
 
                 {/* Slot 2 */}
-                <div className="relative h-[330px] rounded-xl border border-slate-700/80 overflow-hidden bg-[#0b1424] flex flex-col justify-between p-3.5 shadow-xl">
+                <div className="relative h-[330px] rounded-xl border border-white/10 overflow-hidden bg-[#080f1e] flex flex-col justify-between p-3.5 shadow-xl">
                   <div className="flex justify-between items-center text-xs font-mono z-10">
                     <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 font-bold text-[10px]">
-                      {files[1].metadata?.image_type === 'sar' ? 'SAR RADAR' : 'OPTICAL (T2)'}
+                      {files[1].metadata?.sensor || 'SAR SENSOR'}
                     </span>
-                    <span className="text-slate-400 text-[10px]">{files[1].metadata?.acquisition_date || '2025'}</span>
+                    <span className="text-slate-400 text-[10px]">{files[1].metadata?.acquisition_date || 'T2'}</span>
                   </div>
 
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -346,38 +416,35 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
                       <img src={preview2} alt="Slot 2" className="w-full h-full object-cover" />
                     ) : (
                       <div className="flex flex-col items-center opacity-60">
-                        <div className="text-4xl mb-1">📡</div>
-                        <span className="font-mono text-xs text-slate-300 truncate max-w-[200px]">{files[1].original_filename}</span>
-                        <span className="font-mono text-[10px] text-slate-500">{files[1].metadata?.sensor || 'Sentinel-1'}</span>
+                        <span className="font-mono text-xs text-slate-200 font-bold truncate max-w-[200px]">{files[1].original_filename}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="text-[10px] font-mono text-slate-300 flex justify-between z-10 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md border border-slate-800">
+                  <div className="text-[10px] font-mono text-slate-300 flex justify-between z-10 bg-slate-950/80 backdrop-blur-md px-2 py-1 rounded-md border border-white/10">
                     <span>{files[1].metadata?.crs || 'EPSG:4326'}</span>
-                    <span>10m res</span>
+                    <span>{files[1].metadata?.resolution ? `${files[1].metadata.resolution[0]}m` : '10m GSD'}</span>
                   </div>
                 </div>
               </div>
             ) : (
-              /* Single Image View Canvas */
-              <div className="relative w-[580px] h-[340px] rounded-xl border border-slate-700/80 overflow-hidden bg-[#0a1120] flex flex-col justify-between p-4 shadow-2xl">
+              /* Single Scene View Canvas */
+              <div className="relative w-[580px] h-[340px] rounded-xl border border-white/10 overflow-hidden bg-[#080f1e] flex flex-col justify-between p-4 shadow-2xl">
                 <div className="flex justify-between items-center text-xs font-mono z-10">
-                  <span className="px-2 py-0.5 rounded bg-blue-950/80 text-cyan-300 border border-blue-800/60 font-bold text-[10px]">
-                    {files[0].metadata?.image_type?.toUpperCase() || 'OPTICAL'}
+                  <span className="px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 font-bold text-[10px]">
+                    {files[0].metadata?.image_type?.toUpperCase() || 'SATELLITE RASTER'}
                   </span>
-                  <span className="text-slate-400 text-[11px] font-mono">{files[0].original_filename}</span>
+                  <span className="text-slate-400 text-[11px] font-mono truncate max-w-[260px]">{files[0].original_filename}</span>
                 </div>
 
-                {/* Real Imagery Background */}
+                {/* Actual Uploaded Image Canvas */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   {preview1 ? (
                     <img src={preview1} alt="Scene" className="w-full h-full object-cover" />
                   ) : (
                     <div className="flex flex-col items-center justify-center opacity-40">
-                      <div className="text-5xl mb-2">🛰️</div>
-                      <div className="font-mono text-xs text-slate-400">
-                        {files[0].metadata?.sensor || 'Sentinel-2'} Multispectral Tile
+                      <div className="font-mono text-xs text-slate-300 font-bold">
+                        {files[0].metadata?.sensor || 'Sentinel-2'} Raster Tile
                       </div>
                     </div>
                   )}
@@ -418,14 +485,14 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
 
                         {isActive && (
                           <div className="absolute -bottom-5 left-0 px-2 py-0.5 rounded bg-black/85 text-[9px] font-mono text-cyan-200 whitespace-nowrap border border-slate-700">
-                            Image-Space: [{x1}, {y1}, {x2}, {y2}] px
+                            BBox: [{x1}, {y1}, {x2}, {y2}] px
                           </div>
                         )}
                       </div>
                     );
                   })}
 
-                {/* Change Region Highlight Overlays */}
+                {/* Change Region Highlights */}
                 {overlays.changeHeatmap &&
                   changeItems.map((ev, idx) => {
                     const [x1, y1, x2, y2] = ev.bbox!;
@@ -452,30 +519,32 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
                     );
                   })}
 
-                <div className="flex justify-between items-center text-[10px] font-mono text-slate-300 z-10 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md border border-slate-800">
-                  <span>CRS: {files[0].metadata?.crs || 'EPSG:4326'}</span>
-                  <span>Bounds: [{imgWidth} × {imgHeight} px]</span>
+                <div className="flex justify-between items-center text-[10px] font-mono text-slate-300 z-10 bg-slate-950/80 backdrop-blur-md px-2 py-1 rounded-md border border-white/10">
+                  <span>CRS: {crsText}</span>
+                  <span>Dimensions: [{imgWidth} × {imgHeight} px]</span>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Bottom Scale Bar & Coordinates */}
+        {/* Bottom Coordinates & Scale Bar */}
         <div className="absolute bottom-2 left-4 right-4 z-20 flex justify-between items-center text-[10px] font-mono text-slate-400 pointer-events-none">
-          <div className="flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-md px-2 py-0.5 rounded border border-slate-800 pointer-events-auto">
+          <div className="flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 pointer-events-auto">
             <span className="w-6 h-[2px] bg-cyan-400 inline-block" />
             <span>500 m</span>
           </div>
 
-          <div className="bg-slate-900/80 backdrop-blur-md px-2 py-0.5 rounded border border-slate-800 pointer-events-auto">
-            <span>12.97°N, 77.59°E · {Math.round(zoom * 100)}%</span>
+          <div className="bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 pointer-events-auto flex items-center gap-2">
+            <span>{mousePos ? `x: ${mousePos.x}px, y: ${mousePos.y}px` : '12.9716°N, 77.5946°E'}</span>
+            <span>•</span>
+            <span className="text-cyan-400 font-bold">{Math.round(zoom * 100)}%</span>
           </div>
         </div>
       </div>
 
-      {/* Bottom Viewer Toolbar */}
-      <div className="flex flex-wrap justify-between items-center px-3.5 py-2 bg-[#0a101d] border-t border-slate-800/80 z-20 gap-2">
+      {/* Bottom Toolbar: Overlay Controls & Legend */}
+      <div className="flex flex-wrap justify-between items-center px-4 py-2 bg-slate-950/80 border-t border-white/10 z-20 gap-2">
         <OverlayControls
           overlays={overlays}
           onChange={setOverlays}

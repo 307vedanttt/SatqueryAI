@@ -38,11 +38,11 @@ class DisagreementDetector:
         if len(specialist_results) == 0:
             return DisagreementResult(detected=False)
 
-        # Collect all (source, claim) pairs
+        # Collect all (source, description) pairs
         source_claims: list[tuple[str, str, float]] = []
         for result in specialist_results:
             for ev in result.evidence:
-                source_claims.append((ev.source, ev.claim.lower(), ev.confidence))
+                source_claims.append((ev.source, ev.description.lower(), ev.confidence))
 
         # Within optical+SAR results, also check cross-sensor evidence
         all_items: list[DisagreementItem] = []

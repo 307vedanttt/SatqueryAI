@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import analysis, health, sessions, upload
+from app.api.routes import analysis, health, sessions, upload, imagery
 from app.core.config import get_settings
 from app.core.exceptions import SatQueryError
 from app.core.logging import get_logger
@@ -103,6 +103,7 @@ def create_app() -> FastAPI:
 
     # Mount routers
     app.include_router(health.router, tags=["Health"])
+    app.include_router(imagery.router, prefix="/api/imagery", tags=["Imagery"])
     app.include_router(upload.router, prefix="/api/v1", tags=["Upload"])
     app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
     app.include_router(sessions.router, prefix="/api/v1", tags=["Sessions"])

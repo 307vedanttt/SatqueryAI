@@ -67,7 +67,7 @@ async def analyze(
     """
     request_id = uuid.uuid4().hex
     start_time = datetime.now(timezone.utc)
-    trace = TraceRecorder()
+    trace = TraceRecorder(analysis_id=request_id)
 
     # --- Persist analysis request ---
     db_request = orm.AnalysisRequest(
@@ -171,20 +171,26 @@ async def analyze(
 
         response = AnalysisResponse(
             request_id=request_id,
-            session_id=request.session_id,
+            session_id=request.session_id or "default_session",
             status=final_status,
             input={
                 "configuration": input_config.value,
                 "files": [f.original_filename for f in files],
             },
             intent=intent_result,
+            selected_specialist=route_plan.specialist,
             answer=answer,
             evidence=evidence,
             confidence=confidence,
             disagreement=disagreement,
             execution_trace=trace.steps,
+            warnings=[],
             created_at=start_time,
             duration_ms=duration_ms,
+            timestamps={
+                "started": start_time.isoformat(),
+                "completed": end_time.isoformat()
+            }
         )
 
         # --- Persist result ---
@@ -227,6 +233,17 @@ async def get_analysis(
         raise NotFoundError(message=f"Analysis '{request_id}' not found or not yet complete.")
     return AnalysisResponse(**db_req.result_json)
 
+@router.get("/analysis/{request_id}/trace", response_model=list[ExecutionStep], summary="Get analysis trace")
+async def get_analysis_trace(
+    request_id: str,
+    db: Session = Depends(get_db),
+) -> list[ExecutionStep]:
+    """Retrieve the execution trace for a given analysis."""
+    db_req = db.query(orm.AnalysisRequest).filter(orm.AnalysisRequest.id == request_id).first()
+    if not db_req or not db_req.result_json:
+        raise NotFoundError(message=f"Analysis '{request_id}' not found or not yet complete.")
+    return [ExecutionStep(**step) for step in db_req.result_json.get("execution_trace", [])]
+
 
 @router.get("/history", summary="Get recent analysis history")
 async def get_history_list(
@@ -262,3 +279,97 @@ async def get_history_list(
         })
 
     return items
+    
+@router.get("/history/{request_id}", summary="Get specific history item")
+async def get_history_item(
+    request_id: str,
+    db: Session = Depends(get_db)
+) -> dict:
+    """Retrieve a specific analysis history item by its ID."""
+    r = db.query(orm.AnalysisRequest).filter(orm.AnalysisRequest.id == request_id).first()
+    if not r:
+        raise NotFoundError(message=f"History item '{request_id}' not found.")
+        
+    res = r.result_json or {}
+    answer = res.get("answer", {}).get("text", "")
+    conf_label = res.get("confidence", {}).get("label", "moderate")
+    files = res.get("input", {}).get("files", [])
+    
+    return {
+        "id": r.id,
+        "query": r.query_text,
+        "timestamp": r.created_at.isoformat() if r.created_at else "",
+        "task": r.intent or "ANALYSIS",
+        "confidenceScore": r.confidence_score or 0.8,
+        "confidenceLabel": conf_label,
+        "answerSummary": answer[:180] + "..." if len(answer) > 180 else answer,
+        "files": files,
+        "configuration": r.input_configuration or "SINGLE_OPTICAL",
+        "result": res
+    }
+
+@router.get("/reports", summary="Get recent reports")
+async def get_reports_list(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Retrieve recent reports."""
+    records = (
+        db.query(orm.AnalysisRequest)
+        .filter(orm.AnalysisRequest.status == "success")
+        .order_by(orm.AnalysisRequest.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    items = []
+    for r in records:
+        res = r.result_json or {}
+        answer = res.get("answer", {}).get("text", "")
+        conf_label = res.get("confidence", {}).get("label", "moderate")
+
+        items.append({
+            "id": r.id,
+            "title": f"Analysis Report {r.id[:6]}",
+            "requestId": r.id,
+            "task": r.intent or "ANALYSIS",
+            "date": r.created_at.isoformat() if r.created_at else "",
+            "imageCount": len(res.get("input", {}).get("files", [])),
+            "confidenceScore": r.confidence_score or 0.8,
+            "confidenceLabel": conf_label,
+            "specialistUsed": r.specialist_used or "Unknown",
+            "summary": answer[:180] + "..." if len(answer) > 180 else answer,
+            "evidenceCount": len(res.get("evidence", [])),
+            "result": res
+        })
+
+    return items
+
+@router.get("/reports/{request_id}", summary="Get specific report")
+async def get_report_item(
+    request_id: str,
+    db: Session = Depends(get_db)
+) -> dict:
+    """Retrieve a specific report by its analysis ID."""
+    r = db.query(orm.AnalysisRequest).filter(orm.AnalysisRequest.id == request_id).first()
+    if not r:
+        raise NotFoundError(message=f"Report for '{request_id}' not found.")
+        
+    res = r.result_json or {}
+    answer = res.get("answer", {}).get("text", "")
+    conf_label = res.get("confidence", {}).get("label", "moderate")
+    
+    return {
+        "id": r.id,
+        "title": f"Analysis Report {r.id[:6]}",
+        "requestId": r.id,
+        "task": r.intent or "ANALYSIS",
+        "date": r.created_at.isoformat() if r.created_at else "",
+        "imageCount": len(res.get("input", {}).get("files", [])),
+        "confidenceScore": r.confidence_score or 0.8,
+        "confidenceLabel": conf_label,
+        "specialistUsed": r.specialist_used or "Unknown",
+        "summary": answer,
+        "evidenceCount": len(res.get("evidence", [])),
+        "result": res
+    }

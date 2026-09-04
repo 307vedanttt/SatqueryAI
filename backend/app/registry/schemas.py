@@ -22,8 +22,12 @@ class ToolSpec(BaseModel):
     supported_intents: list[str] = Field(
         description="QueryIntent values this tool can handle"
     )
+    input_requirements: dict = Field(default_factory=dict, description="Expected input parameters")
+    output_schema: dict = Field(default_factory=dict, description="Expected output schema")
     required_parameters: list[str] = Field(default_factory=list)
     provider: str = Field(description="Provider name: 'mock' | 'openai' | etc.")
+    model_status: str = Field(default="production", description="E.g. 'mock', 'beta', 'production'")
+    availability_status: str = Field(default="available", description="'available', 'unavailable', 'loading'")
     timeout_seconds: int = Field(default=60)
     enabled: bool = Field(default=True)
     metadata: dict = Field(default_factory=dict)

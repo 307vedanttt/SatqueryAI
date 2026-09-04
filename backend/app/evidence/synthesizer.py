@@ -30,9 +30,9 @@ class EvidenceSynthesizer:
 
         for result in specialist_results:
             for ev in result.evidence:
-                # Deduplication key: claim text (first 80 chars) + bbox
+                # Deduplication key: description text (first 80 chars) + bbox
                 bbox_str = str(ev.bbox) if ev.bbox else "none"
-                key = f"{ev.claim[:80]}|{bbox_str}"
+                key = f"{ev.description[:80]}|{bbox_str}"
                 if key not in seen_keys:
                     seen_keys.add(key)
                     all_evidence.append(ev)

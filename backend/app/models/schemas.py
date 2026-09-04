@@ -128,10 +128,12 @@ class UploadResponse(BaseModel):
 # ============================================================
 
 class AnalysisRequest(BaseModel):
-    session_id: str
-    upload_id: str
-    file_ids: list[str]
+    session_id: str | None = None
+    upload_id: str | None = None
+    image_ids: list[str] = Field(default_factory=list, alias="file_ids")
+    configuration: str = Field(default="single", description="single, grounding, optical_sar, or bi_temporal")
     query: str = Field(min_length=1, max_length=2000)
+    options: dict[str, Any] = Field(default_factory=dict)
 
 
 # ============================================================
@@ -169,11 +171,12 @@ class SpecialistRequest(BaseModel):
 
 
 class Evidence(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     evidence_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
-    specialist: str
+    specialist: str | None = None
     source: str
-    claim: str
-    evidence_type: EvidenceType = EvidenceType.MODEL_PREDICTION
+    type: EvidenceType = Field(alias="evidence_type", default=EvidenceType.MODEL_PREDICTION)
+    description: str = Field(alias="claim", default="")
     region: dict[str, Any] | None = None
     bbox: list[int] | None = None          # [x1, y1, x2, y2]
     date: str | None = None
@@ -184,10 +187,14 @@ class Evidence(BaseModel):
 
 class SpecialistResult(BaseModel):
     specialist: str
+    model_name: str | None = None
+    task: str | None = None
     status: AnalysisStatus
     answer: str
     evidence: list[Evidence] = Field(default_factory=list)
     raw_confidence: float = Field(ge=0.0, le=1.0, default=0.0)
+    latency: float | None = None
+    warnings: list[str] = Field(default_factory=list)
     error: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -227,14 +234,17 @@ class DisagreementResult(BaseModel):
 # ============================================================
 
 class ExecutionStep(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    analysis_id: str | None = None
     step_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     step_index: int
     timestamp: datetime
-    action: str
-    component: str
+    step: str = Field(alias="action")
     status: ExecutionStepStatus
     duration_ms: int | None = None
-    output_summary: str | None = None
+    specialist: str | None = Field(alias="component", default=None)
+    explanation: str | None = Field(alias="output_summary", default=None)
+    error: str | None = None
     parameters: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -256,6 +266,7 @@ class AnalysisResponse(BaseModel):
     input: dict[str, Any]          # configuration + file list
 
     intent: IntentResult | None = None
+    selected_specialist: str | None = None
 
     answer: AnswerBlock
 
@@ -268,11 +279,13 @@ class AnalysisResponse(BaseModel):
     )
 
     execution_trace: list[ExecutionStep] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
     visual_outputs: list[dict[str, Any]] = Field(default_factory=list)
 
     created_at: datetime | None = None
     duration_ms: int | None = None
+    timestamps: dict[str, str] = Field(default_factory=dict)
 
 
 # ============================================================

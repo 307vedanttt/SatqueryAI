@@ -30,25 +30,60 @@ class SpecialistRegistry:
     def __init__(self) -> None:
         self._specs: dict[str, ToolSpec] = {}
         self._impls: dict[str, Specialist] = {}
+        self._factories: dict[str, Any] = {}
 
-    def register(self, spec: ToolSpec, implementation: Specialist) -> None:
-        """Register a specialist with its spec and implementation."""
+    def register(self, spec: ToolSpec, implementation_or_factory: Any, is_lazy: bool = False) -> None:
+        """Register a specialist with its spec and either an implementation instance or a factory for lazy loading."""
         if not spec.enabled:
             logger.info("specialist_disabled", name=spec.name)
             return
 
+        # Check for duplicate
+        if spec.name in self._specs:
+            logger.warning("specialist_duplicate_registration", name=spec.name)
+            
         self._specs[spec.name] = spec
-        self._impls[spec.name] = implementation
-        logger.info("specialist_registered", name=spec.name, version=spec.version, provider=spec.provider)
+        if is_lazy:
+            self._factories[spec.name] = implementation_or_factory
+        else:
+            self._impls[spec.name] = implementation_or_factory
+            
+        logger.info("specialist_registered", name=spec.name, version=spec.version, provider=spec.provider, lazy=is_lazy)
 
     def get_specialist(self, name: str) -> Specialist:
-        """Return specialist implementation. Raises InvalidToolRequestError if not found."""
-        impl = self._impls.get(name)
-        if not impl:
+        """Return specialist implementation (instantiating if lazy loaded). Raises InvalidToolRequestError if not found."""
+        if name not in self._specs:
             raise InvalidToolRequestError(
                 message=f"Specialist '{name}' is not registered or is disabled."
             )
-        return impl
+            
+        # Check availability
+        if self._specs[name].availability_status == "unavailable":
+            raise NoSpecialistAvailableError(message=f"Specialist '{name}' is currently unavailable.")
+
+        if name not in self._impls:
+            # Lazy load
+            try:
+                self._specs[name].availability_status = "loading"
+                factory = self._factories[name]
+                self._impls[name] = factory()
+                self._specs[name].availability_status = "available"
+            except Exception as e:
+                self._specs[name].availability_status = "unavailable"
+                raise NoSpecialistAvailableError(message=f"Failed to load specialist '{name}': {e}")
+                
+        return self._impls[name]
+
+    def unload_specialist(self, name: str) -> None:
+        """Gracefully unload a specialist from memory if it was lazy loaded."""
+        if name in self._factories and name in self._impls:
+            del self._impls[name]
+            logger.info("specialist_unloaded", name=name)
+
+    def check_availability(self, name: str) -> str:
+        """Return the availability status of the model."""
+        spec = self._specs.get(name)
+        return spec.availability_status if spec else "unregistered"
 
     def get_spec(self, name: str) -> ToolSpec:
         """Return ToolSpec. Raises InvalidToolRequestError if not found."""
@@ -133,9 +168,11 @@ class SpecialistRegistry:
                     "BUILT_UP_ANALYSIS", "WATER_ANALYSIS", "UNKNOWN",
                 ],
                 provider="mock",
+                model_status="mock",
                 timeout_seconds=30,
             ),
-            MockSingleImageSpecialist(),
+            MockSingleImageSpecialist,
+            is_lazy=True,
         )
 
         self.register(
@@ -155,9 +192,11 @@ class SpecialistRegistry:
                     "SCENE_DESCRIPTION", "UNKNOWN",
                 ],
                 provider="mock",
+                model_status="mock",
                 timeout_seconds=45,
             ),
-            MockOpticalSARSpecialist(),
+            MockOpticalSARSpecialist,
+            is_lazy=True,
         )
 
         self.register(
@@ -176,9 +215,11 @@ class SpecialistRegistry:
                     "WATER_ANALYSIS", "UNKNOWN",
                 ],
                 provider="mock",
+                model_status="mock",
                 timeout_seconds=45,
             ),
-            MockChangeDetectionSpecialist(),
+            MockChangeDetectionSpecialist,
+            is_lazy=True,
         )
 
         self.register(
@@ -191,7 +232,9 @@ class SpecialistRegistry:
                 supported_input_configurations=["SINGLE_OPTICAL", "SINGLE_SAR"],
                 supported_intents=["GROUNDING"],
                 provider="mock",
+                model_status="mock",
                 timeout_seconds=30,
             ),
-            MockGroundingSpecialist(),
+            MockGroundingSpecialist,
+            is_lazy=True,
         )

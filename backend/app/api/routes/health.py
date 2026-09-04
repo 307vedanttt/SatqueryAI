@@ -8,8 +8,7 @@ from pydantic import BaseModel
 from app.core.config import get_settings
 from app.models.database import check_db_connection
 
-router = APIRouter()
-
+router = APIRouter(prefix="/api/health")
 
 class HealthResponse(BaseModel):
     status: str
@@ -21,8 +20,8 @@ class HealthResponse(BaseModel):
     vision_provider: str
     llm_provider: str
 
-
-@router.get("/health", response_model=HealthResponse, summary="Health check")
+@router.get("", response_model=HealthResponse, summary="Health check")
+@router.get("/", response_model=HealthResponse, summary="Health check")
 async def health_check() -> HealthResponse:
     """
     Returns current system health status.
@@ -40,4 +39,19 @@ async def health_check() -> HealthResponse:
         timestamp=datetime.now(timezone.utc).isoformat(),
         vision_provider=settings.effective_vision_provider,
         llm_provider=settings.effective_llm_provider,
+    )
+
+class ReadinessResponse(BaseModel):
+    status: str
+    database: str
+
+@router.get("/ready", response_model=ReadinessResponse, summary="Readiness check")
+async def readiness_check() -> ReadinessResponse:
+    """
+    Checks whether required backend dependencies are available.
+    """
+    db_ok = check_db_connection()
+    return ReadinessResponse(
+        status="ready" if db_ok else "not_ready",
+        database="ok" if db_ok else "error",
     )

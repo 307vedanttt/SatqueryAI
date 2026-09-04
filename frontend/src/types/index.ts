@@ -183,7 +183,7 @@ export interface HealthResponse {
 
 // ---- Frontend UI & Navigation Types ----------------------------
 
-export type NavigationTab = 'workspace' | 'history' | 'reports' | 'evaluation' | 'about';
+export type NavigationTab = 'home' | 'workspace' | 'history' | 'reports' | 'evaluation' | 'about';
 
 export type ViewMode = 'single' | 'side-by-side' | 'before-after' | 'difference';
 

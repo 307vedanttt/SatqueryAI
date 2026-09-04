@@ -37,6 +37,8 @@ class _StepContext:
         self._start = time.monotonic()
         self._step_index = len(recorder.steps)
         self._output_summary: str | None = None
+        self._error: str | None = None
+        self._status: ExecutionStepStatus = ExecutionStepStatus.IN_PROGRESS
 
     def complete(self, output_summary: str | None = None) -> None:
         """Mark step as successfully completed."""
@@ -45,7 +47,7 @@ class _StepContext:
 
     def fail(self, reason: str | None = None) -> None:
         """Mark step as failed."""
-        self._output_summary = reason
+        self._error = reason
         self._status = ExecutionStepStatus.FAILED
 
     def __enter__(self) -> "_StepContext":
@@ -57,17 +59,20 @@ class _StepContext:
 
         if exc_type is not None:
             self._status = ExecutionStepStatus.FAILED
-            self._output_summary = f"Error: {type(exc_val).__name__}"
+            self._error = f"Error: {type(exc_val).__name__} - {str(exc_val)}"
+            # Ensure we don't expose stack traces per requirements
 
         step = ExecutionStep(
+            analysis_id=self._recorder.analysis_id,
             step_id=uuid.uuid4().hex,
             step_index=self._step_index,
             timestamp=datetime.now(timezone.utc),
-            action=self._action,
-            component=self._component,
+            step=self._action,
+            specialist=self._component,
             status=self._status,
             duration_ms=duration_ms,
-            output_summary=self._output_summary,
+            explanation=self._output_summary,
+            error=self._error,
         )
         self._recorder.steps.append(step)
 
@@ -78,7 +83,8 @@ class _StepContext:
 class TraceRecorder:
     """Records the full execution trace for an analysis request."""
 
-    def __init__(self) -> None:
+    def __init__(self, analysis_id: str | None = None) -> None:
+        self.analysis_id = analysis_id
         self.steps: list[ExecutionStep] = []
 
     def step(self, action: str, component: str) -> _StepContext:

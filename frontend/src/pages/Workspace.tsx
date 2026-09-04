@@ -178,42 +178,40 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
 
   return (
     <div className="workspace-page flex flex-col gap-4">
-      {/* Top Quick Scenarios Bar */}
-      <div className="demo-bar flex flex-wrap items-center justify-between gap-2.5 p-2 rounded-xl bg-[#0a101d] border border-slate-800/80 shadow-sm">
+      {/* Quick Demo Presets Bar */}
+      <div className="demo-bar flex flex-wrap items-center justify-between gap-2.5 p-2 rounded-xl bg-slate-950/70 backdrop-blur-md border border-white/10 shadow-sm">
         <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-          <span className="text-cyan-400 font-bold text-xs pl-1">⚡ SCENARIOS:</span>
+          <span className="text-cyan-400 font-bold text-xs pl-1 flex items-center gap-1">
+            <span>⚡</span> DEMO PRESETS:
+          </span>
           <button
             type="button"
-            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
+            className="px-2.5 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('vqa')}
           >
-            1. Single VQA
+            1. Single Scene
           </button>
           <button
             type="button"
-            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
+            className="px-2.5 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('grounding')}
           >
             2. Grounding
           </button>
           <button
             type="button"
-            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
+            className="px-2.5 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('optical-sar')}
           >
             3. Optical + SAR
           </button>
           <button
             type="button"
-            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
+            className="px-2.5 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer text-[11px] font-semibold"
             onClick={() => handleLoadDemoPreset('change')}
           >
             4. Bi-Temporal Change
           </button>
-        </div>
-
-        <div className="text-[11px] font-mono text-slate-500 hidden lg:block pr-2">
-          Select scenario or drag satellite imagery into the workspace.
         </div>
       </div>
 
@@ -278,6 +276,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
             hasQuery={Boolean(query.trim())}
             isAnalyzing={isAnalyzing}
             result={analysisResult}
+            error={error}
           />
         </div>
 
@@ -290,6 +289,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
             evidence={analysisResult?.evidence || []}
             activeEvidenceId={activeEvidenceId}
             onClearActiveEvidence={() => setActiveEvidenceId(null)}
+            isAnalyzing={isAnalyzing}
           />
 
           {/* Configuration & Ingestion */}
@@ -317,10 +317,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({ onRecordHistory }) => {
             canAnalyze={uploadedInfos.length > 0 && query.trim().length > 0 && !isUploading}
             hasResult={Boolean(analysisResult)}
             configuration={detectedConfig}
+            error={error}
           />
 
           {/* Analysis Progress indicator during execution */}
-          <AnalysisProgress isAnalyzing={isAnalyzing} />
+          <AnalysisProgress
+            isAnalyzing={isAnalyzing}
+            result={analysisResult}
+            error={error}
+          />
         </div>
 
         {/* Column 3: Right Evidence & AI Results Panel (390px) */}

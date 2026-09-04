@@ -76,21 +76,16 @@ export async function uploadFiles(
     return mockUploadFiles(files, sessionId);
   }
 
-  try {
-    const formData = new FormData();
-    files.forEach((f) => formData.append('files', f));
-    if (sessionId) formData.append('session_id', sessionId);
+  const formData = new FormData();
+  files.forEach((f) => formData.append('files', f));
+  if (sessionId) formData.append('session_id', sessionId);
 
-    const res = await fetch(`${API_BASE}/upload`, {
-      method: 'POST',
-      body: formData,
-      signal: AbortSignal.timeout(15000),
-    });
-    return await handleResponse<UploadResponse>(res);
-  } catch (err) {
-    console.warn('Backend upload unreachable, switching to demo mock mode:', err);
-    return mockUploadFiles(files, sessionId);
-  }
+  const res = await fetch(`/api/imagery/upload`, {
+    method: 'POST',
+    body: formData,
+    signal: AbortSignal.timeout(15000),
+  });
+  return await handleResponse<UploadResponse>(res);
 }
 
 // ---- Analysis ------------------------------------------------
@@ -103,18 +98,13 @@ export async function runAnalysis(
     return mockRunAnalysis(request, uploadedInfos || []);
   }
 
-  try {
-    const res = await fetch(`${API_BASE}/analyze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-      signal: AbortSignal.timeout(30000),
-    });
-    return await handleResponse<AnalysisResponse>(res);
-  } catch (err) {
-    console.warn('Backend analyze unreachable, falling back to mock provider:', err);
-    return mockRunAnalysis(request, uploadedInfos || []);
-  }
+  const res = await fetch(`${API_BASE}/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    signal: AbortSignal.timeout(30000),
+  });
+  return await handleResponse<AnalysisResponse>(res);
 }
 
 export async function getAnalysisResult(requestId: string): Promise<AnalysisResponse> {
@@ -125,21 +115,15 @@ export async function getAnalysisResult(requestId: string): Promise<AnalysisResp
 // ---- History & Reports ---------------------------------------
 
 export async function getHistory(): Promise<HistoryItem[]> {
-  try {
-    const res = await fetch(`${API_BASE}/history`, { signal: AbortSignal.timeout(2000) });
-    return await handleResponse<HistoryItem[]>(res);
-  } catch {
-    return getMockHistory();
-  }
+  if (FORCE_MOCK) return getMockHistory();
+  const res = await fetch(`${API_BASE}/history`, { signal: AbortSignal.timeout(2000) });
+  return await handleResponse<HistoryItem[]>(res);
 }
 
 export async function getReports(): Promise<ReportItem[]> {
-  try {
-    const res = await fetch(`${API_BASE}/reports`, { signal: AbortSignal.timeout(2000) });
-    return await handleResponse<ReportItem[]>(res);
-  } catch {
-    return getMockReports();
-  }
+  if (FORCE_MOCK) return getMockReports();
+  const res = await fetch(`${API_BASE}/reports`, { signal: AbortSignal.timeout(2000) });
+  return await handleResponse<ReportItem[]>(res);
 }
 
 export async function getEvaluation(): Promise<EvaluationMetricCard[]> {
